@@ -19,7 +19,7 @@ $sync.ProcessRunning = $false
 
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Output "Winutil needs to be run as Administrator. Attempting to relaunch."
-    Start-Process -Verb runas -FilePath powershell.exe -ArgumentList "iwr -useb https://christitus.com/win | iex"
+    Start-Process -Verb runas -FilePath powershell.exe -ArgumentList "iwr -useb https://raw.githubusercontent.com/winters27/sriracha/main/srirachatool.ps1 | iex"
     break
 }
 Function Get-WinUtilCheckBoxes {
@@ -310,7 +310,7 @@ function Install-WinUtilWinget {
         }
 
         Write-Host "Running Alternative Installer and Direct Installing"
-        Start-Process -Verb runas -FilePath powershell.exe -ArgumentList "irm https://raw.githubusercontent.com/ChrisTitusTech/winutil/main/winget.ps1 | iex"
+        Start-Process -Verb runas -FilePath powershell.exe -ArgumentList "irm https://raw.githubusercontent.com/winters27/sriracha/main/srirachatool.ps1 | iex"
         
         Write-Host "Winget Installed"
     }
