@@ -1190,25 +1190,25 @@ Function Invoke-WPFFormVariables {
     
     Write-Host ""
     Write-Host "             /`$`$`$`$`$`$            /`$`$                              /`$`$                 " -ForegroundColor Red
-    Write-Host "            /`$`$__  `$`$          |__/                             | `$`$                 " -ForegroundColor Orange
+    Write-Host "            /`$`$__  `$`$          |__/                             | `$`$                 " -ForegroundColor Red
     Write-Host "           | `$`$  \__/  /`$`$`$`$`$`$  /`$`$  /`$`$`$`$`$`$  /`$`$`$`$`$`$   /`$`$`$`$`$`$`$| `$`$`$`$`$`$`$   /`$`$`$`$`$`$  " -ForegroundColor Red
-    Write-Host "           |  `$`$`$`$`$`$  /`$`$__  `$`$| `$`$ /`$`$__  `$`$|____  `$`$ /`$`$_____/| `$`$__  `$`$ |____  `$`$ " -ForegroundColor Orange
+    Write-Host "           |  `$`$`$`$`$`$  /`$`$__  `$`$| `$`$ /`$`$__  `$`$|____  `$`$ /`$`$_____/| `$`$__  `$`$ |____  `$`$ " -ForegroundColor Red
     Write-Host "            \____  `$`$| `$`$  \__/| `$`$| `$`$  \__/ /`$`$`$`$`$`$`$| `$`$      | `$`$  \ `$`$  /`$`$`$`$`$`$`$ " -ForegroundColor Red
-    Write-Host "            /`$$  \ `$`$| `$`$      | `$`$| `$`$      /`$`$__  `$`$| `$`$      | `$`$  | `$`$ /`$`$__  `$`$ " -ForegroundColor Orange
-    Write-Host "           |  $`$`$`$`$`$/| `$`$      | `$`$| `$`$     |  `$`$`$`$`$`$`$|  `$`$`$`$`$`$`$| `$`$  | `$`$|  `$`$`$`$`$`$`$ " -ForegroundColor Orange
+    Write-Host "            /`$$  \ `$`$| `$`$      | `$`$| `$`$      /`$`$__  `$`$| `$`$      | `$`$  | `$`$ /`$`$__  `$`$ " -ForegroundColor Red
+    Write-Host "           |  $`$`$`$`$`$/| `$`$      | `$`$| `$`$     |  `$`$`$`$`$`$`$|  `$`$`$`$`$`$`$| `$`$  | `$`$|  `$`$`$`$`$`$`$ " -ForegroundColor Red
     Write-Host "            \______/ |__/      |__/|__/      \_______/ \_______/|__/  |__/ \_______/ " -ForegroundColor Red
     Write-Host ""
-    Write-Host "                              /`$`$`$`$`$`$`$`$                  /`$`$                         "
-    Write-Host "                             |__  `$`$__/                 | `$`$                         "
-    Write-Host "                                | `$`$  /`$`$`$`$`$`$   /`$`$`$`$`$`$ | `$`$                         "
-    Write-Host "                                | `$`$ /`$`$__  `$`$ /`$`$__  `$`$| `$`$                         "
-    Write-Host "                                | `$`$| `$`$  \ `$`$| `$`$  \ `$`$| `$`$                         "
-    Write-Host "                                | `$`$| `$`$  | `$`$| `$`$  | `$`$| `$`$                         "
-    Write-Host "                                | `$`$|  `$`$`$`$`$`$/|  `$`$`$`$`$`$/| `$`$                         "
-    Write-Host "                                |__/ \______/  \______/ |__/                         "
+    Write-Host "                              /`$`$`$`$`$`$`$`$                  /`$`$                         " -ForegroundColor DarkYellow
+    Write-Host "                             |__  `$`$__/                 | `$`$                         " -ForegroundColor DarkYellow
+    Write-Host "                                | `$`$  /`$`$`$`$`$`$   /`$`$`$`$`$`$ | `$`$                         " -ForegroundColor DarkYellow
+    Write-Host "                                | `$`$ /`$`$__  `$`$ /`$`$__  `$`$| `$`$                         " -ForegroundColor DarkYellow
+    Write-Host "                                | `$`$| `$`$  \ `$`$| `$`$  \ `$`$| `$`$                         " -ForegroundColor DarkYellow
+    Write-Host "                                | `$`$| `$`$  | `$`$| `$`$  | `$`$| `$`$                         " -ForegroundColor DarkYellow
+    Write-Host "                                | `$`$|  `$`$`$`$`$`$/|  `$`$`$`$`$`$/| `$`$                         " -ForegroundColor DarkYellow
+    Write-Host "                                |__/ \______/  \______/ |__/                         " -ForegroundColor DarkYellow
     Write-Host ""
     Write-Host ""
-    Write-Host "                                            by " -NoNewline
+    Write-Host "                                          by " -NoNewline
 Write-Host "Winters" -ForegroundColor Cyan -NoNewline
 Write-Host ""
     Write-Host ""
