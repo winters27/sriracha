@@ -1208,7 +1208,7 @@ Function Invoke-WPFFormVariables {
     Write-Host "                                |__/ \______/  \______/ |__/                         "
     Write-Host ""
     Write-Host ""
-    Write-Host "                                   by " -NoNewline
+    Write-Host "                                      by " -NoNewline
 Write-Host "Winters" -ForegroundColor Blue -NoNewline
 Write-Host ""
     Write-Host ""
