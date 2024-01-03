@@ -3893,7 +3893,7 @@ $inputXML = '<Window x:Class="WinUtility.MainWindow"
                                 <Setter TargetName="BackgroundBorder" Property="Background" Value="{ButtonBackgroundMouseoverColor}"/>
                                 <Setter Property="Effect">
                                     <Setter.Value>
-                                        <DropShadowEffect Opacity="1" ShadowDepth="5" Color="Gold" Direction="-100" BlurRadius="45"/>
+                                        <DropShadowEffect Opacity="1" ShadowDepth="5" Color="Red" Direction="-100" BlurRadius="45"/>
                                     </Setter.Value>
                                 </Setter>
                                 <Setter Property="Panel.ZIndex" Value="2000"/>
@@ -3904,7 +3904,7 @@ $inputXML = '<Window x:Class="WinUtility.MainWindow"
                                 <Setter TargetName="BackgroundBorder" Property="Background" Value="{ButtonBackgroundSelectedColor}"/>
                                 <Setter Property="Effect">
                                     <Setter.Value>
-                                        <DropShadowEffect Opacity="1" ShadowDepth="2" Color="Gold" Direction="-111" BlurRadius="25"/>
+                                        <DropShadowEffect Opacity="1" ShadowDepth="2" Color="Red" Direction="-111" BlurRadius="25"/>
                                     </Setter.Value>
                                 </Setter>
                             </Trigger>
@@ -6636,8 +6636,8 @@ $sync.configs.themes = '{
                 },                
     "Matrix":  {
                    "ComboBoxBackgroundColor":  "#000000",
-                   "LabelboxForegroundColor":  "#FFEE58",
-                   "MainForegroundColor":  "#9CCC65",
+                   "LabelboxForegroundColor":  "#FFAC1C",
+                   "MainForegroundColor":  "#FCEDDA",
                    "MainBackgroundColor":  "#000000",
                    "LabelBackgroundColor":  "#000000",
                    "ComboBoxForegroundColor":  "#FFEE58",
@@ -6653,12 +6653,12 @@ $sync.configs.themes = '{
                    "ButtonBackgroundPressedColor":  "#FFFFFF",
                    "ButtonBackgroundMouseoverColor":  "#A55A64",
                    "ButtonBackgroundSelectedColor":  "#FF5733",
-                   "ButtonForegroundColor":  "#9CCC65",
+                   "ButtonForegroundColor":  "#FCEDDA",
                    "ButtonBorderThickness":  "1",
                    "ButtonMargin":  "1",
                    "ButtonCornerRadius": "2",
                    "ToggleButtonHeight": "25",
-                   "BorderColor": "#FFAC1C",
+                   "BorderColor": "#EE4E34",
                    "BorderOpacity": "0.8",
                    "ShadowPulse": "0:0:3"
                }
