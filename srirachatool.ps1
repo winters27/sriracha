@@ -14,7 +14,7 @@ Add-Type -AssemblyName System.Windows.Forms
 # Variable to sync between runspaces
 $sync = [Hashtable]::Synchronized(@{})
 $sync.PSScriptRoot = $PSScriptRoot
-$sync.version = "24.01.02"
+$sync.version = "1.27"
 $sync.configs = @{}
 $sync.ProcessRunning = $false
 
@@ -3187,7 +3187,7 @@ function Invoke-WPFToggle {
     Param ([string]$Button)
 
     # Use this to get the name of the button
-    #[System.Windows.MessageBox]::Show("$Button","Chris Titus Tech's Windows Utility","OK","Info")
+    #[System.Windows.MessageBox]::Show("$Button","Sriracha Gang's Windows Utility","OK","Info")
 
     Switch -Wildcard ($Button){
 
@@ -3728,7 +3728,7 @@ $inputXML = '<Window x:Class="WinUtility.MainWindow"
         Background="{MainBackgroundColor}"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
-        Title="Chris Titus Tech''s Windows Utility" Height="800" Width="1200">
+        Title="Sriracha Gang''s Windows Utility" Height="800" Width="1200">
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="0" CornerRadius="10"/>
     </WindowChrome.WindowChrome>
@@ -5981,6 +5981,13 @@ $sync.configs.applications = '{
 	"panel": "4",
 	"content": "Alacritty Terminal"
 	},
+"WPFInstallamdryzenmaster": {
+    "winget": "AMD.RyzenMaster",
+    "choco": "amd-ryzen-master",
+    "category": "Utilities",
+    "panel": "4",
+    "content": "AMD Ryzen Master"
+    },
 "WPFInstallanydesk": {
 	"winget": "AnyDeskSoftwareGmbH.AnyDesk",
 	"choco": "anydesk",
@@ -6107,6 +6114,13 @@ $sync.configs.applications = '{
 	"panel": "4",
 	"content": "Everything Search"
 	},
+"WPFInstallesetnod32": {
+    "winget": "ESET.Nod32",
+    "choco": "eset-nod32-antivirus",
+    "category": "Utilities",
+    "panel": "4",
+    "content": "ESET Nod32"
+    },
 "WPFInstallfiles": {
 	"winget": "YairAichenbaum.Files",
 	"choco": "files",
@@ -6121,6 +6135,13 @@ $sync.configs.applications = '{
 	"panel": "4",
 	"content": "f.lux Redshift"
 	},
+"WPFInstallgeforceexperience": {
+    "winget": "Nvidia.GeForceExperience",
+    "choco": "geforce-experience",
+    "category": "Utilities",
+    "panel": "4",
+    "content": "Geforce Experience"
+    },
 "WPFInstallglaryutilities": {
 	"winget": "Glarysoft.GlaryUtilities",
 	"choco": "glaryutilities-free",
@@ -6156,6 +6177,13 @@ $sync.configs.applications = '{
 	"panel": "4",
 	"content": "J Download Manager"
 	},
+  "WPFInstallJoyToKey": {
+    "winget": "JTKsoftware.JoyToKey",
+    "choco": "joytokey",
+    "category": "Utilities",
+    "panel": "4",
+    "content": "JoyToKey"
+    },
 "WPFInstallkdeconnect": {
 	"winget": "KDE.KDEConnect",
 	"choco": "kdeconnect-kde",
@@ -6268,6 +6296,13 @@ $sync.configs.applications = '{
 	"panel": "4",
 	"content": "ownCloud Desktop"
 	},
+"WPFInstallpcloud": {
+    "winget": "pCloudAG.pCloudDrive",
+    "choco": "pcloud",
+    "category": "Utilities",
+    "panel": "4",
+    "content": "pCloud Drive"
+    },
 "WPFInstallpeazip": {
 	"winget": "Giorgiotani.Peazip",
 	"choco": "peazip",
@@ -9359,7 +9394,7 @@ $sync["Form"].Add_MouseDoubleClick({
 # setting window icon to make it look more professional
 $sync["Form"].Add_Loaded({
    
-    $downloadUrl = "https://christitus.com/images/logo-full.png"
+    $downloadUrl = "https://miro.medium.com/v2/resize:fit:1358/1*i2MeHNqKvmnPpqBUzZQf3w.jpeg"
     $destinationPath = Join-Path $env:TEMP "cttlogo.png"
     
     # Check if the file already exists
