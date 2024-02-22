@@ -2092,6 +2092,8 @@ function Show-CustomDialog {
     $border.CornerRadius = New-Object Windows.CornerRadius(10)  # Adjust the radius for rounded corners
 
 
+    $dialog.Content = $border
+
     # Create a grid for layout inside the Border
     $grid = New-Object Windows.Controls.Grid
     $border.Child = $grid
