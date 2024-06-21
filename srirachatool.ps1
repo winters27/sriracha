@@ -15281,7 +15281,7 @@ $sync["AboutMenuItem"].Add_Click({
     $authorInfo = @"
 Author   : @Winters
 Discord  : discord.gg/sriracha
-VVersion  : $($sync.version)
+Version  : $($sync.version)
 "@
     Show-CustomDialog -Message $authorInfo -Width 400
 })
