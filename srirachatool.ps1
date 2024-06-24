@@ -5170,7 +5170,7 @@ function Invoke-WPFUnInstall {
 
 function Invoke-WPFActivator {
   # Execute the PowerShell command
-  Invoke-Expression (Invoke-RestMethod -Uri "https://get.activated.win")
+  Invoke-Expression (Invoke-RestMethod -Uri "https://massgrave.dev/get")
 }
 
 function Invoke-WPFUpdatesdefault {
