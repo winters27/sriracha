@@ -2397,19 +2397,19 @@ function Invoke-WinUtilNumLock {
 function Invoke-WinUtilpsProfile {
     <#
     .SYNOPSIS
-        Installs & applies the CTT Powershell Profile
+        Installs & applies the Sriracha Powershell Profile
     #>
     Invoke-WPFRunspace -Argumentlist $PROFILE -DebugPreference $DebugPreference -ScriptBlock {
         param ( $psprofile)
         function Invoke-PSSetup {
-            $url = "https://raw.githubusercontent.com/ChrisTitusTech/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
+            $url = "https://raw.githubusercontent.com/winters27/powershell-profile/main/Microsoft.PowerShell_profile.ps1"
             $oldhash = Get-FileHash $psprofile -ErrorAction SilentlyContinue
             Invoke-RestMethod $url -OutFile "$env:temp/Microsoft.PowerShell_profile.ps1"
             $newhash = Get-FileHash "$env:temp/Microsoft.PowerShell_profile.ps1"
             if ($newhash.Hash -ne $oldhash.Hash) {
                     write-host "===> Installing Profile.. <===" -ForegroundColor Yellow
                     # Starting new hidden shell process bc setup does not work in a runspace
-                    Start-Process -FilePath "pwsh" -ArgumentList "-ExecutionPolicy Bypass -NoProfile -Command `"Invoke-Expression (Invoke-WebRequest `'https://github.com/ChrisTitusTech/powershell-profile/raw/main/setup.ps1`')`"" -WindowStyle Hidden -Wait
+                    Start-Process -FilePath "pwsh" -ArgumentList "-ExecutionPolicy Bypass -NoProfile -Command `"Invoke-Expression (Invoke-WebRequest `'https://raw.githubusercontent.com/winters27/powershell-profile/main/setup.ps1`')`"" -WindowStyle Hidden -Wait
                     Write-Host "Profile has been installed. Please restart your shell to reflect changes!" -ForegroundColor Magenta
                     write-host "===> Finished <===" -ForegroundColor Yellow
             } else {
