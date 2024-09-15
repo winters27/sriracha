@@ -14881,9 +14881,6 @@ $sync["Form"].Add_Loaded({
     $sync["Form"].MaxHeight = [Double]::PositiveInfinity
 })
 
-$NavLogoPanel = $sync["Form"].FindName("NavLogoPanel")
-$NavLogoPanel.Children.Add((Invoke-WinUtilAssets -Type "logo" -Size 25)) | Out-Null
-
 # Initialize the hashtable
 $winutildir = @{}
 
