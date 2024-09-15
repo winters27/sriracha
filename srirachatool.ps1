@@ -58,34 +58,9 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     }
 
     $powershellcmd = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
-    
-    # Try Windows Terminal first, then fall back to PowerShell if it's not available
-    $processCmd = if (Get-Command wt -ErrorAction SilentlyContinue) { 
-        "wt"
-    } else { 
-        $powershellcmd
-    }
+    $processCmd = if (Get-Command wt.exe -ErrorAction SilentlyContinue) { "wt.exe" } else { $powershellcmd }
 
-    $fullCommand = "$powershellcmd -ExecutionPolicy Bypass -NoProfile -Command `"$script`""
-    
-    Write-Debug "Attempting to start with command: $processCmd $fullCommand"
-
-    try {
-        if ($processCmd -eq "wt") {
-            Start-Process $processCmd -ArgumentList "new-tab", $fullCommand -Verb RunAs
-        } else {
-            Start-Process $powershellcmd -ArgumentList "-ExecutionPolicy Bypass -NoProfile -Command `"$script`"" -Verb RunAs
-        }
-    } catch {
-        Write-Output "Failed to start with $processCmd. Error: $_"
-        Write-Output "Attempting to start with PowerShell directly..."
-        try {
-            Start-Process $powershellcmd -ArgumentList "-ExecutionPolicy Bypass -NoProfile -Command `"$script`"" -Verb RunAs
-        } catch {
-            Write-Output "Failed to start PowerShell as well. Error: $_"
-            Write-Output "Please run the script as an administrator manually."
-        }
-    }
+    Start-Process $processCmd -ArgumentList "$powershellcmd -ExecutionPolicy Bypass -NoProfile -Command $script" -Verb RunAs
 
     break
 }
