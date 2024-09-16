@@ -9739,7 +9739,7 @@ $sync.configs.themes = '{
     "ButtonForegroundColor": "#232629",
     "ToggleButtonOnColor": "#2e77ff"
   },
-"Matrix": {
+  "Matrix": {
     "ComboBoxBackgroundColor": "#232629",
     "LabelboxForegroundColor": "#f7f7f7",
     "MainForegroundColor": "#F7F7F7",
@@ -9768,7 +9768,7 @@ $sync.configs.themes = '{
     "BorderColor": "#CC6000",  // Changed from #0060CC to an orange equivalent
     "BorderOpacity": "0.2",
     "ShadowPulse": "0:0:3"
-},
+  },
   "Dark": {
     "ComboBoxBackgroundColor": "#1e3747",
     "LabelboxForegroundColor": "#0567ff",
