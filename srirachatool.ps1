@@ -9745,9 +9745,9 @@ $sync.configs.themes = '{
     "MainForegroundColor": "#F7F7F7",
     "MainBackgroundColor": "#232629",
     "LabelBackgroundColor": "#232629",
-    "LinkForegroundColor": "#add8e6",  // This remains unchanged
+    "LinkForegroundColor": "#add8e6",
     "LinkHoverForegroundColor": "#F7F7F7",
-    "ComboBoxForegroundColor": "#c1a181",  // Changed from #81a1c1 to an orange equivalent
+    "ComboBoxForegroundColor": "#c1a181",
     "ProgressBarForegroundColor": "#222222",
     "ProgressBarBackgroundColor": "Transparent",
     "ProgressBarTextColor": "#cccccc",
@@ -9762,10 +9762,10 @@ $sync.configs.themes = '{
     "ButtonBackgroundColor": "#1E3747",
     "ButtonBackgroundPressedColor": "#F7F7F7",
     "ButtonBackgroundMouseoverColor": "#3B4252",
-    "ButtonBackgroundSelectedColor": "#AC815E",  // Changed from #5E81AC to an orange equivalent
+    "ButtonBackgroundSelectedColor": "#AC815E",
     "ButtonForegroundColor": "#F7F7F7",
-    "ToggleButtonOnColor": "#ff7700",  // Changed from #2e77ff to an orange equivalent
-    "BorderColor": "#CC6000",  // Changed from #0060CC to an orange equivalent
+    "ToggleButtonOnColor": "#ff7700",
+    "BorderColor": "#CC6000",
     "BorderOpacity": "0.2",
     "ShadowPulse": "0:0:3"
   },
