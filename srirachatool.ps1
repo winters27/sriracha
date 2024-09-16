@@ -2285,40 +2285,55 @@ function New-FirstRun {
     Remove-Item -Path "$env:USERPROFILE\Desktop\*.lnk"
     Remove-Item -Path "C:\Users\Default\Desktop\*.lnk"
 
-    # ************************************************
-    # Create WinUtil shortcut on the desktop
-    #
-    $desktopPath = "$($env:USERPROFILE)\Desktop"
-    # Specify the target PowerShell command
-    $command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'irm https://brandonwinters.dev/tool | iex'"
-    # Specify the path for the shortcut
-    $shortcutPath = Join-Path $desktopPath 'sriracha.lnk'
-    # Create a shell object
-    $shell = New-Object -ComObject WScript.Shell
+# ************************************************
+# Create WinUtil shortcut on the desktop
+#
+$desktopPath = "$($env:USERPROFILE)\Desktop"
 
-    # Create a shortcut object
-    $shortcut = $shell.CreateShortcut($shortcutPath)
+# Check for PowerShell 7
+if (Get-Command "pwsh" -ErrorAction SilentlyContinue) {
+    $shell = "pwsh.exe"
+} else {
+    $shell = "powershell.exe"
+}
 
-    if (Test-Path -Path "c:\Windows\cttlogo.png") {
-        $shortcut.IconLocation = "c:\Windows\cttlogo.png"
-    }
+# Specify the target PowerShell command
+$command = "Start-Process $shell -verb runas -ArgumentList '-ExecutionPolicy Bypass -Command `"irm https://brandonwinters.dev/tool | iex`"'"
 
-    # Set properties of the shortcut
-    $shortcut.TargetPath = "powershell.exe"
-    $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command `"$command`""
-    # Save the shortcut
-    $shortcut.Save()
+# Specify the path for the shortcut
+$shortcutPath = Join-Path $desktopPath 'Sriracha.lnk'
 
-    # Make the shortcut have 'Run as administrator' property on
-    $bytes = [System.IO.File]::ReadAllBytes($shortcutPath)
-    # Set byte value at position 0x15 in hex, or 21 in decimal, from the value 0x00 to 0x20 in hex
-    $bytes[0x15] = $bytes[0x15] -bor 0x20
-    [System.IO.File]::WriteAllBytes($shortcutPath, $bytes)
+# Create a shell object
+$shell = New-Object -ComObject WScript.Shell
 
-    Write-Host "Shortcut created at: $shortcutPath"
-    #
-    # Done create WinUtil shortcut on the desktop
-    # ************************************************
+# Create a shortcut object
+$shortcut = $shell.CreateShortcut($shortcutPath)
+
+# Download and set custom icon
+$iconPath = "c:\Windows\cttlogo.ico"
+if (-not (Test-Path -Path $iconPath)) {
+    Invoke-WebRequest -Uri "https://files.catbox.moe/3wae02.ico" -OutFile $iconPath
+}
+if (Test-Path -Path $iconPath) {
+    $shortcut.IconLocation = $iconPath
+}
+
+# Set properties of the shortcut
+$shortcut.TargetPath = $shell
+$shortcut.Arguments = "-ExecutionPolicy Bypass -Command `"$command`""
+
+# Save the shortcut
+$shortcut.Save()
+
+# Make the shortcut have 'Run as administrator' property on
+$bytes = [System.IO.File]::ReadAllBytes($shortcutPath)
+$bytes[0x15] = $bytes[0x15] -bor 0x20
+[System.IO.File]::WriteAllBytes($shortcutPath, $bytes)
+
+Write-Host "Shortcut created at: $shortcutPath"
+#
+# Done create WinUtil shortcut on the desktop
+# ************************************************
 
     Start-Process explorer
 
