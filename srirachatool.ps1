@@ -6019,8 +6019,8 @@ Function Invoke-WPFUltimatePerformance {
             $duplicateOutput = powercfg /duplicatescheme $ultimateGUID
 
             $guid = $null
-            $nameFromFile = "ChrisTitus - Ultimate Power Plan"
-            $description = "Ultimate Power Plan, added via WinUtils"
+            $nameFromFile = "Winters - Ultimate Power Plan"
+            $description = "Ultimate Power Plan, added via Sriracha Tool"
 
             # Extract the new GUID from the duplicateOutput
             foreach ($line in $duplicateOutput) {
