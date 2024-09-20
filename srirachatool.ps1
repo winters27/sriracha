@@ -2320,6 +2320,46 @@ function New-FirstRun {
     # Done create SrirachaTool shortcut on the desktop
     # ************************************************
 
+
+        # ************************************************
+    # Create PostResetTasks shortcut on the desktop
+    #
+    $desktopPath = "$($env:USERPROFILE)\Desktop"
+    
+    # Specify the target PowerShell command, pointing to your GitHub script
+    $command = "powershell.exe -ExecutionPolicy Bypass -File https://raw.githubusercontent.com/winters27/PostResetTasks/refs/heads/main/PostResetTasks.ps1"
+    
+    # Specify the path for the shortcut
+    $shortcutPath = Join-Path $desktopPath 'PostResetTasks.lnk'
+    
+    # Create a shell object
+    $shell = New-Object -ComObject WScript.Shell
+    
+    # Create a shortcut object
+    $shortcut = $shell.CreateShortcut($shortcutPath)
+    
+    # (Optional) Set a custom icon if you have one
+    # if (Test-Path -Path "c:\Windows\your_icon.ico") {
+    #     $shortcut.IconLocation = "c:\Windows\your_icon.ico"
+    # }
+    
+    # Set properties of the shortcut
+    $shortcut.TargetPath = "powershell.exe"
+    $shortcut.Arguments = "-ExecutionPolicy Bypass -File `"$command`""
+    
+    # Save the shortcut
+    $shortcut.Save()
+    
+    # Make the shortcut have 'Run as administrator' property on
+    $bytes = [System.IO.File]::ReadAllBytes($shortcutPath)
+    $bytes[0x15] = $bytes[0x15] -bor 0x20
+    [System.IO.File]::WriteAllBytes($shortcutPath, $bytes)
+    
+    Write-Host "Shortcut created at: $shortcutPath"
+    #
+    # Done create PostResetTasks shortcut on the desktop
+    # ************************************************
+
     Start-Process explorer
 
 '@
