@@ -2446,8 +2446,8 @@ Function Get-SrirachaToolCheckBoxes {
                     "Install" {
                         # Get the winget value
                         [PsCustomObject]@{
-                            winget = "$($sync.configs.applications.$($CheckBox.Name).winget)";
-                            choco  = "$($sync.configs.applications.$($CheckBox.Name).choco)";
+                            winget = "$($sync.configs.applications.$($CheckBox.Key).winget)";
+                            choco  = "$($sync.configs.applications.$($CheckBox.Key).choco)";
                         }
 
                     }
@@ -2460,8 +2460,8 @@ Function Get-SrirachaToolCheckBoxes {
                     $Output[$group] = @()
                 }
                 if ($group -eq "Install") {
-                    $Output["WPFInstall"] += $CheckBox.Name
-                    Write-Debug "Adding: $($CheckBox.Name) under: WPFInstall"
+                    $Output["WPFInstall"] += $CheckBox.Key
+                    Write-Debug "Adding: $($CheckBox.Key) under: WPFInstall"
                 }
 
                 Write-Debug "Adding: $($feature) under: $($group)"
@@ -5292,12 +5292,38 @@ function Show-WPFInstallAppBusy {
         $text = "Installing apps..."
     )
     $sync.form.Dispatcher.Invoke([action] {
-            $sync.InstallAppAreaOverlay.Visibility = [Windows.Visibility]::Visible
-            $sync.InstallAppAreaOverlay.Width = $($sync.InstallAppAreaScrollViewer.ActualWidth * 0.4)
-            $sync.InstallAppAreaOverlay.Height = $($sync.InstallAppAreaScrollViewer.ActualWidth * 0.4)
-            $sync.InstallAppAreaOverlayText.Text = $text
-            $sync.InstallAppAreaBorder.IsEnabled = $false
-            $sync.InstallAppAreaScrollViewer.Effect.Radius = 5
+            if ($sync.InstallAppAreaOverlay -and $sync.InstallAppAreaScrollViewer) {
+                $sync.InstallAppAreaOverlay.Visibility = [Windows.Visibility]::Visible
+                $sync.InstallAppAreaOverlay.Width = $($sync.InstallAppAreaScrollViewer.ActualWidth * 0.4)
+                $sync.InstallAppAreaOverlay.Height = $($sync.InstallAppAreaScrollViewer.ActualWidth * 0.4)
+                if ($sync.InstallAppAreaOverlayText) {
+                    $sync.InstallAppAreaOverlayText.Text = $text
+                }
+                if ($sync.InstallAppAreaBorder) {
+                    $sync.InstallAppAreaBorder.IsEnabled = $false
+                }
+                if ($sync.InstallAppAreaScrollViewer.Effect) {
+                    $sync.InstallAppAreaScrollViewer.Effect.Radius = 5
+                }
+            }
+        })
+}
+function Hide-WPFInstallAppBusy {
+    <#
+    .SYNOPSIS
+        Hides the busy overlay in the install app area of the WPF form.
+        This is called when an install or uninstall completes.
+    #>
+    $sync.form.Dispatcher.Invoke([action] {
+            if ($sync.InstallAppAreaOverlay -and $sync.InstallAppAreaScrollViewer) {
+                $sync.InstallAppAreaOverlay.Visibility = [Windows.Visibility]::Collapsed
+                if ($sync.InstallAppAreaBorder) {
+                    $sync.InstallAppAreaBorder.IsEnabled = $true
+                }
+                if ($sync.InstallAppAreaScrollViewer.Effect) {
+                    $sync.InstallAppAreaScrollViewer.Effect.Radius = 0
+                }
+            }
         })
 }
 function Test-SrirachaToolInternetConnection {
@@ -6624,17 +6650,24 @@ function Invoke-WPFSelectedAppsUpdate {
 
     }
     elseif ($type -eq "Remove") {
-        $sync.SelectedApps.Remove($appKey)
+        $sync.SelectedApps.Remove($appKey) | Out-Null
     }
     else {
         Write-Error "Type: $type not implemented"
     }
 
     $count = $sync.SelectedApps.Count
-    $selectedAppsButton.Content = "Selected Apps: $count"
+    
+    # Update UI elements only if they exist
+    if ($selectedAppsButton) {
+        $selectedAppsButton.Content = "Selected Apps: $count"
+    }
+    
     # On every change, remove all entries inside the Popup Menu. This is done, so we can keep the alphabetical order even if elements are selected in a random way
-    $sync.selectedAppsstackPanel.Children.Clear()
-    $sync.SelectedApps | Foreach-Object { Add-SelectedAppsMenuItem -name $($sync.configs.applicationsHashtable.$_.Content) -key $_ }
+    if ($sync.selectedAppsstackPanel) {
+        $sync.selectedAppsstackPanel.Children.Clear()
+        $sync.SelectedApps | Foreach-Object { Add-SelectedAppsMenuItem -name $($sync.configs.applicationsHashtable.$_.Content) -key $_ }
+    }
 
 }
 function Invoke-WPFSSHServer {
@@ -7469,6 +7502,18 @@ function Invoke-WPFUIElements {
                     if ($entryInfo.Checked -eq $true) {
                         $checkBox.IsChecked = $entryInfo.Checked
                     }
+                    
+                    # Set Tag on parent for Invoke-WPFSelectedAppsUpdate to identify the app
+                    $horizontalStackPanel.Tag = $entryInfo.Name
+                    
+                    # Wire checkbox events to update selectedApps collection
+                    $checkBox.Add_Checked({
+                            Invoke-WPFSelectedAppsUpdate -type "Add" -checkbox $this
+                        })
+                    $checkBox.Add_Unchecked({
+                            Invoke-WPFSelectedAppsUpdate -type "Remove" -checkbox $this
+                        })
+                    
                     $horizontalStackPanel.Children.Add($checkBox) | Out-Null
 
                     if ($entryInfo.Link) {
