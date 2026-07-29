@@ -831,7 +831,16 @@ Function Install-SrirachaToolProgramWinget {
             [string]$wingetId
         )
 
-        $commonArguments = "--id $wingetId --silent"
+        # Store-only apps carry an "msstore:" prefix on their id, since winget will not
+        # find them in the default source. Everything else is left alone, so no --source
+        # is passed and resolution stays exactly as it was.
+        $sourceArgument = ""
+        if ($wingetId.StartsWith("msstore:", [System.StringComparison]::OrdinalIgnoreCase)) {
+            $wingetId = $wingetId.Substring("msstore:".Length)
+            $sourceArgument = " --source msstore"
+        }
+
+        $commonArguments = "--id $wingetId --silent$sourceArgument"
         $arguments = if ($Action -eq "Install") {
             "install $commonArguments --accept-source-agreements --accept-package-agreements"
         }
@@ -1198,14 +1207,18 @@ Function Invoke-SrirachaToolCurrentSystem {
 
         $originalEncoding = [Console]::OutputEncoding
         [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
-        $Sync.InstalledPrograms = winget list -s winget | Select-Object -skip 3 | ConvertFrom-String -PropertyNames "Name", "Id", "Version", "Available" -Delimiter '\s{2,}'
+        # No -s filter, so Store-sourced packages are listed too and their checkboxes
+        # come back ticked like any other installed app.
+        $Sync.InstalledPrograms = winget list --accept-source-agreements --disable-interactivity | Select-Object -skip 3 | ConvertFrom-String -PropertyNames "Name", "Id", "Version", "Available" -Delimiter '\s{2,}'
         [Console]::OutputEncoding = $originalEncoding
 
         $filter = Get-SrirachaToolVariables -Type Checkbox | Where-Object { $psitem -like "WPFInstall*" }
         $sync.GetEnumerator() | Where-Object { $psitem.Key -in $filter } | ForEach-Object {
             $dependencies = @($sync.configs.applications.$($psitem.Key).winget -split ";")
+            # winget list reports the bare id, without the source prefix we store.
+            $installedId = $dependencies[-1] -replace '^msstore:', ''
 
-            if ($dependencies[-1] -in $sync.InstalledPrograms.Id) {
+            if ($installedId -in $sync.InstalledPrograms.Id) {
                 Write-Output $psitem.name
             }
         }
@@ -6193,6 +6206,14 @@ $sync.configs.applications = @'
     "link": "https://www.blender.org/",
     "winget": "BlenderFoundation.Blender"
   },
+  "WPFInstallblip": {
+    "category": "Utilities",
+    "choco": "na",
+    "content": "Blip",
+    "description": "Blip moves large files directly between your own devices, without uploading them to a cloud service first.",
+    "link": "https://blip.net/",
+    "winget": "msstore:9N7JSXC1SJK6"
+  },
   "WPFInstallbrave": {
     "category": "Browsers",
     "choco": "brave",
@@ -7889,6 +7910,14 @@ $sync.configs.applications = @'
     "link": "https://www.rainmeter.net/",
     "winget": "Rainmeter.Rainmeter"
   },
+  "WPFInstallraycast": {
+    "category": "Utilities",
+    "choco": "na",
+    "content": "Raycast",
+    "description": "Raycast is a keyboard-driven launcher for finding apps and files and running extensions from a single search bar.",
+    "link": "https://www.raycast.com/",
+    "winget": "msstore:9pfxxshc64h3"
+  },
   "WPFInstallrevo": {
     "category": "Utilities",
     "choco": "revo-uninstaller",
@@ -9467,7 +9496,7 @@ $sync.configs.feature = @'
 $sync.configs.preset = @'
 {
   "Standard": [
-    "WPFTweaksAH",
+    "WPFTweaksActivity",
     "WPFTweaksConsumerFeatures",
     "WPFTweaksDVR",
     "WPFTweaksHiber",
