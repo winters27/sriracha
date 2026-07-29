@@ -6270,6 +6270,15 @@ $sync.configs.applications = @'
     "link": "https://cemu.info/",
     "winget": "Cemu.Cemu"
   },
+
+  "WPFInstallchatgpt": {
+    "category": "Development",
+    "choco": "na",
+    "content": "ChatGPT Desktop",
+    "description": "The official ChatGPT desktop app for Windows, distributed through the Microsoft Store.",
+    "link": "https://apps.microsoft.com/detail/9nt1r1c2hh7j",
+    "winget": "msstore:9NT1R1C2HH7J"
+  },
   "WPFInstallchatterino": {
     "category": "Communications",
     "choco": "chatterino",
@@ -6301,6 +6310,33 @@ $sync.configs.applications = @'
     "description": "Arc is a Chromium based browser, known for it's clean and modern design.",
     "link": "https://arc.net/",
     "winget": "TheBrowserCompany.Arc"
+  },
+
+  "WPFInstallcinebenchr23": {
+    "category": "Pro Tools",
+    "choco": "na",
+    "content": "Cinebench R23",
+    "description": "Cinebench R23 is a benchmark tool for comparing CPU rendering performance across systems.",
+    "link": "https://www.maxon.net/en/cinebench",
+    "winget": "Maxon.CinebenchR23"
+  },
+
+  "WPFInstallclaude": {
+    "category": "Development",
+    "choco": "claude",
+    "content": "Claude Desktop",
+    "description": "Anthropic's Claude desktop application for focused AI-assisted work and chat.",
+    "link": "https://claude.ai/download",
+    "winget": "Anthropic.Claude"
+  },
+
+  "WPFInstallclaudecode": {
+    "category": "Development",
+    "choco": "claude-code",
+    "content": "Claude Code",
+    "description": "Anthropic's agentic coding tool for terminal and IDE development workflows.",
+    "link": "https://code.claude.com/",
+    "winget": "Anthropic.ClaudeCode"
   },
   "WPFInstallclementine": {
     "category": "Multimedia Tools",
@@ -6374,6 +6410,15 @@ $sync.configs.applications = @'
     "link": "https://crystalmark.info/en/software/crystaldiskmark/",
     "winget": "CrystalDewWorld.CrystalDiskMark"
   },
+
+  "WPFInstallcursor": {
+    "category": "Development",
+    "choco": "cursoride",
+    "content": "Cursor",
+    "description": "AI-powered code editor (VS Code-based) with agentic coding features and integrated AI assistance for development workflows.",
+    "link": "https://cursor.com/",
+    "winget": "Anysphere.Cursor"
+  },
   "WPFInstalldarktable": {
     "category": "Multimedia Tools",
     "choco": "darktable",
@@ -6405,6 +6450,15 @@ $sync.configs.applications = @'
     "description": "Deluge is a free and open-source BitTorrent client. It features a user-friendly interface, support for plugins, and the ability to manage torrents remotely.",
     "link": "https://deluge-torrent.org/",
     "winget": "DelugeTeam.Deluge"
+  },
+
+  "WPFInstalldeskflow": {
+    "category": "Utilities",
+    "choco": "deskflow",
+    "content": "Deskflow",
+    "description": "Deskflow is a free and open-source software KVM that lets you share a single keyboard and mouse across multiple computers.",
+    "link": "https://github.com/deskflow/deskflow",
+    "winget": "Deskflow.Deskflow"
   },
   "WPFInstalldevtoys": {
     "category": "Utilities",
@@ -6461,6 +6515,24 @@ $sync.configs.applications = @'
     "description": "Docker Desktop is a powerful tool for containerized application development and deployment.",
     "link": "https://www.docker.com/products/docker-desktop",
     "winget": "Docker.DockerDesktop"
+  },
+
+  "WPFInstalldorion": {
+    "category": "Communications",
+    "choco": "dorion",
+    "content": "Dorion",
+    "description": "Tiny alternative Discord client with a smaller footprint, snappier startup, themes, plugins and more!",
+    "link": "https://github.com/SpikeHD/Dorion",
+    "winget": "SpikeHD.Dorion"
+  },
+
+  "WPFInstalldotnet10": {
+    "category": "Microsoft Tools",
+    "choco": "dotnet-10.0-runtime",
+    "content": ".NET Desktop Runtime 10",
+    "description": ".NET Desktop Runtime 10 is a runtime environment required for running applications developed with .NET 10.",
+    "link": "https://dotnet.microsoft.com/download/dotnet/10.0",
+    "winget": "Microsoft.DotNet.DesktopRuntime.10"
   },
   "WPFInstalldotnet3": {
     "category": "Microsoft Tools",
@@ -6934,6 +7006,15 @@ $sync.configs.applications = @'
     "link": "https://www.heidisql.com/",
     "winget": "HeidiSQL.HeidiSQL"
   },
+
+  "WPFInstallhelium": {
+    "category": "Browsers",
+    "choco": "helium",
+    "content": "Helium",
+    "description": "Private, fast, and honest web browser.",
+    "link": "https://github.com/imputnet/helium/",
+    "winget": "ImputNet.Helium"
+  },
   "WPFInstallhelix": {
     "category": "Development",
     "choco": "helix",
@@ -6957,6 +7038,15 @@ $sync.configs.applications = @'
     "description": "HexChat is a free, open-source IRC (Internet Relay Chat) client with a graphical interface for easy communication.",
     "link": "https://hexchat.github.io/",
     "winget": "HexChat.HexChat"
+  },
+
+  "WPFInstallhugo": {
+    "category": "Utilities",
+    "choco": "hugo-extended",
+    "content": "Hugo",
+    "description": "The world's fastest framework for building websites.",
+    "link": "https://github.com/gohugoio/hugo/",
+    "winget": "Hugo.Hugo.Extended"
   },
   "WPFInstallhwinfo": {
     "category": "Utilities",
@@ -6998,6 +7088,24 @@ $sync.configs.applications = @'
     "link": "https://inkscape.org/",
     "winget": "Inkscape.Inkscape"
   },
+
+  "WPFInstallinternetdownloadmanager": {
+    "category": "Utilities",
+    "choco": "internet-download-manager",
+    "content": "Internet Download Manager",
+    "description": "Internet Download Manager is a download manager for accelerating, resuming, and scheduling file downloads.",
+    "link": "https://www.internetdownloadmanager.com/",
+    "winget": "Tonec.InternetDownloadManager"
+  },
+
+  "WPFInstallirfanview": {
+    "category": "Multimedia Tools",
+    "choco": "irfanview",
+    "content": "IrfanView",
+    "description": "IrfanView is a lightweight, fast, and free image viewer and editor. Supports multiple formats, batch processing, and powerful plugins.",
+    "link": "https://irfanview.com/",
+    "winget": "IrfanSkiljan.IrfanView"
+  },
   "WPFInstallitch": {
     "category": "Games",
     "choco": "itch",
@@ -7021,6 +7129,15 @@ $sync.configs.applications = @'
     "description": "Jami is a secure and privacy-focused communication platform that offers audio and video calls, messaging, and file sharing.",
     "link": "https://jami.net/",
     "winget": "SFLinux.Jami"
+  },
+
+  "WPFInstalljava25": {
+    "category": "Development",
+    "choco": "corretto25jdk",
+    "content": "Amazon Corretto 25 (LTS)",
+    "description": "Amazon Corretto is a no-cost, multiplatform, production-ready distribution of the Open Java Development Kit (OpenJDK).",
+    "link": "https://aws.amazon.com/corretto",
+    "winget": "Amazon.Corretto.25.JDK"
   },
   "WPFInstalljava8": {
     "category": "Development",
@@ -7254,6 +7371,15 @@ $sync.configs.applications = @'
     "link": "https://meldmerge.org/",
     "winget": "Meld.Meld"
   },
+
+  "WPFInstallminitoolpartitionwizard": {
+    "category": "Utilities",
+    "choco": "minitoolpartitionwizard",
+    "content": "MiniTool Partition Wizard",
+    "description": "Comprehensive free partition manager that performs advanced operations Windows natively cannot, such as merging partitions, converting file systems, and organizing disk capacity.",
+    "link": "https://www.partitionwizard.com/",
+    "winget": "MiniTool.PartitionWizard.Free"
+  },
   "WPFInstallModernFlyouts": {
     "category": "Multimedia Tools",
     "choco": "na",
@@ -7261,6 +7387,15 @@ $sync.configs.applications = @'
     "description": "An open source, modern, Fluent Design-based set of flyouts for Windows.",
     "link": "https://github.com/ModernFlyouts-Community/ModernFlyouts/",
     "winget": "ModernFlyouts.ModernFlyouts"
+  },
+
+  "WPFInstallmodrinth": {
+    "category": "Games",
+    "choco": "modrinth-app",
+    "content": "Modrinth App",
+    "description": "Modrinth App is a desktop application for managing Minecraft mods and modpacks.",
+    "link": "https://modrinth.com/app",
+    "winget": "Modrinth.ModrinthApp"
   },
   "WPFInstallmonitorian": {
     "category": "Utilities",
@@ -7285,6 +7420,15 @@ $sync.configs.applications = @'
     "description": "A full-featured download manager.",
     "link": "https://motrix.app/",
     "winget": "agalwood.Motrix"
+  },
+
+  "WPFInstallmpcqt": {
+    "category": "Multimedia Tools",
+    "choco": "mediainfo",
+    "content": "mpc-qt",
+    "description": "Media Player Classic Qute Theater",
+    "link": "https://github.com/mpc-qt/mpc-qt",
+    "winget": "mpc-qt.mpc-qt"
   },
   "WPFInstallmpchc": {
     "category": "Multimedia Tools",
@@ -7326,6 +7470,15 @@ $sync.configs.applications = @'
     "link": "https://github.com/mullvad/mullvadvpn-app",
     "winget": "MullvadVPN.MullvadVPN"
   },
+
+  "WPFInstallblurautoclicker": {
+    "category": "Utilities",
+    "choco": "na",
+    "content": "BlurAutoClicker",
+    "description": "An Auto-clicker with a few advanced features and generally better performance than popular alternatives.",
+    "link": "https://blur009.vercel.app/projects/blur-autoclicker/",
+    "winget": "Blur009.BlurAutoClicker"
+  },
   "WPFInstallBorderlessGaming": {
     "category": "Utilities",
     "choco": "borderlessgaming",
@@ -7342,6 +7495,15 @@ $sync.configs.applications = @'
     "link": "https://sourceforge.net/projects/equalizerapo",
     "winget": "na"
   },
+
+  "WPFInstallcodex": {
+    "category": "Development",
+    "choco": "codex",
+    "content": "Codex",
+    "description": "Codex CLI is an OpenAI coding agent that runs locally in your terminal.",
+    "link": "https://developers.openai.com/codex/cli",
+    "winget": "OpenAI.Codex"
+  },
   "WPFInstallCompactGUI": {
     "category": "Utilities",
     "choco": "compactgui",
@@ -7349,6 +7511,15 @@ $sync.configs.applications = @'
     "description": "Transparently compress active games and programs using Windows 10/11 APIs",
     "link": "https://github.com/IridiumIO/CompactGUI",
     "winget": "IridiumIO.CompactGUI"
+  },
+
+  "WPFInstalleverything": {
+    "category": "Utilities",
+    "choco": "everything",
+    "content": "Everything",
+    "description": "Everything is a search engine that locates files and folders by filename instantly for Windows. Unlike Windows search Everything initially displays every file and folder on your computer (hence the name Everything). You type in a search filter to limit what files and folders are displayed.",
+    "link": "https://www.voidtools.com/",
+    "winget": "voidtools.Everything"
   },
   "WPFInstallExifCleaner": {
     "category": "Utilities",
@@ -7630,6 +7801,15 @@ $sync.configs.applications = @'
     "link": "https://openvpn.net/",
     "winget": "OpenVPNTechnologies.OpenVPNConnect"
   },
+
+  "WPFInstallOverwolf": {
+    "category": "Games",
+    "choco": "overwolf",
+    "content": "Overwolf",
+    "description": "Popular platform for game overlays and companion apps (mod managers, trackers, etc.), widely used by gamers.",
+    "link": "https://www.overwolf.com/app/overwolf-curseforge",
+    "winget": "Overwolf.CurseForge"
+  },
   "WPFInstallOVirtualBox": {
     "category": "Utilities",
     "choco": "virtualbox",
@@ -7718,6 +7898,23 @@ $sync.configs.applications = @'
     "link": "https://www.plex.tv",
     "winget": "Plex.Plex"
   },
+
+  "WPFInstallpnpm": {
+    "category": "Development",
+    "content": "pnpm",
+    "description": "pnpm is a fast and disk space efficient package manager for JavaScript and Node.js applications.",
+    "link": "https://pnpm.io/",
+    "winget": "pnpm.pnpm"
+  },
+
+  "WPFInstallpolicyplus": {
+    "category": "Utilities",
+    "choco": "na",
+    "content": "Policy Plus",
+    "description": "Local Group Policy Editor plus more, for all Windows editions.",
+    "link": "https://github.com/Fleex255/PolicyPlus",
+    "winget": "Fleex255.PolicyPlus"
+  },
   "WPFInstallPortmaster": {
     "category": "Pro Tools",
     "choco": "portmaster",
@@ -7782,6 +7979,15 @@ $sync.configs.applications = @'
     "link": "https://prismlauncher.org/",
     "winget": "PrismLauncher.PrismLauncher"
   },
+
+  "WPFInstallprocessexplorer": {
+    "category": "Microsoft Tools",
+    "choco": "procexp",
+    "content": "Process Explorer",
+    "description": "Process Explorer is a task manager and system monitor.",
+    "link": "https://learn.microsoft.com/sysinternals/downloads/process-explorer",
+    "winget": "Microsoft.Sysinternals.ProcessExplorer"
+  },
   "WPFInstallprocesslasso": {
     "category": "Utilities",
     "choco": "plasso",
@@ -7797,6 +8003,24 @@ $sync.configs.applications = @'
     "description": "2FA app from Proton to securely sync and backup 2FA codes.",
     "link": "https://proton.me/authenticator",
     "winget": "Proton.ProtonAuthenticator"
+  },
+
+  "WPFInstallprotondrive": {
+    "category": "Utilities",
+    "choco": "protondrive",
+    "content": "Proton Drive",
+    "description": "Proton Drive is an end-to-end encrypted Swiss vault for your files that protects your data.",
+    "link": "https://proton.me/drive",
+    "winget": "Proton.ProtonDrive"
+  },
+
+  "WPFInstallprotonmail": {
+    "category": "Communications",
+    "choco": "protonmail",
+    "content": "Proton Mail",
+    "description": "Proton Mail is an end-to-end encrypted email service by Proton, protecting your privacy with zero-access encryption.",
+    "link": "https://proton.me/mail",
+    "winget": "Proton.ProtonMail"
   },
   "WPFInstallprotonpass": {
     "category": "Utilities",
@@ -7949,6 +8173,15 @@ $sync.configs.applications = @'
     "description": "Fast and powerful commandline search tool",
     "link": "https://github.com/BurntSushi/ripgrep/",
     "winget": "BurntSushi.ripgrep.MSVC"
+  },
+
+  "WPFInstallRuby": {
+    "category": "Development",
+    "choco": "ruby",
+    "content": "Ruby",
+    "description": "A Ruby language execution environment with a MSYS2 installation.",
+    "link": "https://rubyinstaller.org/",
+    "winget": "RubyInstallerTeam.Ruby.4.0"
   },
   "WPFInstallrufus": {
     "category": "Utilities",
@@ -8118,6 +8351,15 @@ $sync.configs.applications = @'
     "link": "https://starship.rs/",
     "winget": "starship"
   },
+
+  "WPFInstallstartallback": {
+    "category": "Utilities",
+    "choco": "StartAllBack",
+    "content": "StartAllBack",
+    "description": "StartAllBack restores and improves Windows taskbar, Start menu, File Explorer, and shell UI behavior.",
+    "link": "https://www.startallback.com/",
+    "winget": "StartIsBack.StartAllBack"
+  },
   "WPFInstallsteam": {
     "category": "Games",
     "choco": "steam-client",
@@ -8214,6 +8456,15 @@ $sync.configs.applications = @'
     "link": "https://learn.microsoft.com/en-us/sql/ssms/download-sql-server-management-studio-ssms?view=sql-server-ver16",
     "winget": "Microsoft.SQLServerManagementStudio"
   },
+
+  "WPFInstallsysteminformer": {
+    "category": "Development",
+    "choco": "systeminformer",
+    "content": "System Informer",
+    "description": "A free, powerful, multi-purpose tool that helps you monitor system resources, debug software and detect malware.",
+    "link": "https://systeminformer.com/",
+    "winget": "WinsiderSS.SystemInformer"
+  },
   "WPFInstalltabby": {
     "category": "Utilities",
     "choco": "tabby",
@@ -8253,6 +8504,15 @@ $sync.configs.applications = @'
     "description": "Microsoft Teams is a collaboration platform that integrates with Office 365 and offers chat, video conferencing, file sharing, and more.",
     "link": "https://www.microsoft.com/en-us/microsoft-teams/group-chat-software",
     "winget": "Microsoft.Teams"
+  },
+
+  "WPFInstallteamspeak3": {
+    "category": "Communications",
+    "choco": "teamspeak",
+    "content": "TeamSpeak 3",
+    "description": "TEAMSPEAK. YOUR TEAM. YOUR RULES. Use crystal clear sound to communicate with your teammates cross-platform with military-grade security, lag-free performance & unparalleled reliability and uptime.",
+    "link": "https://www.teamspeak.com/",
+    "winget": "TeamSpeakSystems.TeamSpeakClient"
   },
   "WPFInstallteamviewer": {
     "category": "Utilities",
@@ -8398,6 +8658,15 @@ $sync.configs.applications = @'
     "link": "https://unity.com/",
     "winget": "Unity.UnityHub"
   },
+
+  "WPFInstalluv": {
+    "category": "Development",
+    "choco": "uv",
+    "content": "uv",
+    "description": "uv is a fast Python package and project manager written in Rust.",
+    "link": "https://docs.astral.sh/uv/getting-started/installation/",
+    "winget": "astral-sh.uv"
+  },
   "WPFInstallvagrant": {
     "category": "Development",
     "choco": "vagrant",
@@ -8461,6 +8730,24 @@ $sync.configs.applications = @'
     "description": "Visual Studio 2022 is an integrated development environment (IDE) for building, debugging, and deploying applications.",
     "link": "https://visualstudio.microsoft.com/",
     "winget": "Microsoft.VisualStudio.2022.Community"
+  },
+
+  "WPFInstallvisualstudio2022": {
+    "category": "Development",
+    "choco": "visualstudio2022community",
+    "content": "Visual Studio 2022",
+    "description": "Visual Studio 2022 is an integrated development environment (IDE) for building, debugging, and deploying applications.",
+    "link": "https://visualstudio.microsoft.com/",
+    "winget": "Microsoft.VisualStudio.2022.Community"
+  },
+
+  "WPFInstallvisualstudio2026": {
+    "category": "Development",
+    "choco": "visualstudio2026community",
+    "content": "Visual Studio 2026",
+    "description": "Visual Studio 2026 is an integrated development environment (IDE) for building, debugging, and deploying applications.",
+    "link": "https://visualstudio.microsoft.com/",
+    "winget": "Microsoft.VisualStudio.Community"
   },
   "WPFInstallvivaldi": {
     "category": "Browsers",
@@ -8870,6 +9157,15 @@ $sync.configs.applications = @'
     "link": "https://ambieapp.com/",
     "winget": "9P07XNM5CHP0"
   },
+
+  "WPFInstallLua": {
+    "category": "Development",
+    "choco": "lua",
+    "content": "Lua",
+    "description": "A 'batteries included environment' for the Lua scripting language on Windows.",
+    "link": "https://github.com/rjpcomputing/luaforwindows",
+    "winget": "rjpcomputing.luaforwindows"
+  },
   "WPFInstallmagicwormhole": {
     "category": "Utilities",
     "choco": "magic-wormhole",
@@ -8926,6 +9222,15 @@ $sync.configs.applications = @'
     "link": "https://github.com/Schniz/fnm",
     "winget": "Schniz.fnm"
   },
+
+  "WPFInstallwhatsapp": {
+    "category": "Communications",
+    "choco": "na",
+    "content": "WhatsApp Desktop",
+    "description": "WhatsApp Desktop is the official Windows desktop messaging app from Meta, distributed through the Microsoft Store.",
+    "link": "https://apps.microsoft.com/detail/9nksqgp7f2nh",
+    "winget": "msstore:9NKSQGP7F2NH"
+  },
   "WPFInstallWindhawk": {
     "category": "Utilities",
     "choco": "windhawk",
@@ -8958,6 +9263,15 @@ $sync.configs.applications = @'
     "link": "https://ndi.video/",
     "winget": "NDI.NDITools"
   },
+
+  "WPFInstallkeepassxc": {
+    "category": "Utilities",
+    "choco": "keepassxc",
+    "content": "KeePassXC",
+    "description": "KeePassXC is a modern, secure, and open-source password manager that stores and manages your most sensitive information. You can run KeePassXC on Windows, macOS, and Linux systems. KeePassXC is for people with extremely high demands of secure personal data management. It saves many different types of information, such as usernames, passwords, URLs, attachments, and notes in an offline, encrypted file that can be stored in any location, including private and public cloud solutions. For easy identification and management, user-defined titles and icons can be specified for entries. In addition, entries are sorted into customizable groups. An integrated search function allows you to use advanced patterns to easily find any entry in your database. A customizable, fast, and easy-to-use password generator utility allows you to create passwords with any combination of characters or easy to remember passphrases.",
+    "link": "https://keepassxc.org/",
+    "winget": "KeePassXCTeam.KeePassXC"
+  },
   "WPFInstallkicad": {
     "category": "Multimedia Tools",
     "choco": "na",
@@ -8965,6 +9279,15 @@ $sync.configs.applications = @'
     "description": "Kicad is an open-source EDA tool. It's a good starting point for those who want to do electrical design and is even used by professionals in the industry.",
     "link": "https://www.kicad.org/",
     "winget": "KiCad.KiCad"
+  },
+
+  "WPFInstalldropbox": {
+    "category": "Utilities",
+    "choco": "dropbox",
+    "content": "Dropbox",
+    "description": "Dropbox is a cloud storage client for syncing files, sharing content, and keeping documents available across devices.",
+    "link": "https://www.dropbox.com/desktop",
+    "winget": "Dropbox.Dropbox"
   },
   "WPFInstalldropox": {
     "category": "Utilities",
