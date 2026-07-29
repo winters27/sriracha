@@ -54,21 +54,57 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
         }
     }
 
-    $script = if ($PSCommandPath) {
-        "& { & `'$($PSCommandPath)`' $($argList -join ' ') }"
+    # Started from a file, so relaunch that file. Started from `irm | iex`, so the body
+    # only exists in memory: walk the AST to its root to recover the source and stage it
+    # on disk. Either way the elevated process runs a local file, never a second download.
+    $stagedScript = $null
+    $relaunchPath = $PSCommandPath
+
+    if (-not $relaunchPath) {
+        $ast = {}.Ast
+        while ($ast.Parent) { $ast = $ast.Parent }
+        $selfText = $ast.Extent.Text
+
+        # Anything this short is not the real script, so leave it to the fallback.
+        if ($selfText.Length -gt 1000) {
+            $stagedScript = Join-Path ([System.IO.Path]::GetTempPath()) "srirachatool_$([guid]::NewGuid().ToString('n')).ps1"
+            [System.IO.File]::WriteAllText($stagedScript, $selfText, [System.Text.UTF8Encoding]::new($false))
+            $relaunchPath = $stagedScript
+        }
+    }
+
+    if ($relaunchPath) {
+        $invoke = "& '$relaunchPath' $($argList -join ' ')"
+
+        if ($stagedScript) {
+            # Temp is writable by any process running as this user, so pin the hash the
+            # elevated side has to match, and clear the file once the window closes.
+            $stagedHash = (Get-FileHash -LiteralPath $stagedScript -Algorithm SHA256).Hash
+            $script = "& { try { if ((Get-FileHash -LiteralPath '$stagedScript' -Algorithm SHA256).Hash -ne '$stagedHash') { throw 'SrirachaTool: staged script failed its integrity check.' }; $invoke } finally { Remove-Item -LiteralPath '$stagedScript' -Force -ErrorAction SilentlyContinue } }"
+        }
+        else {
+            $script = "& { $invoke }"
+        }
     }
     else {
-        "&([ScriptBlock]::Create((irm https://raw.githubusercontent.com/winters27/sriracha/main/srirachatool.ps1))) $($argList -join ' ')"
+        $script = "&([ScriptBlock]::Create((irm https://raw.githubusercontent.com/winters27/sriracha/main/srirachatool.ps1))) $($argList -join ' ')"
     }
 
     $powershellCmd = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
     $processCmd = if (Get-Command wt.exe -ErrorAction SilentlyContinue) { "wt.exe" } else { "$powershellCmd" }
 
-    if ($processCmd -eq "wt.exe") {
-        Start-Process $processCmd -ArgumentList "$powershellCmd -ExecutionPolicy Bypass -NoProfile -Command `"$script`"" -Verb RunAs
+    try {
+        if ($processCmd -eq "wt.exe") {
+            Start-Process $processCmd -ArgumentList "$powershellCmd -ExecutionPolicy Bypass -NoProfile -Command `"$script`"" -Verb RunAs -ErrorAction Stop
+        }
+        else {
+            Start-Process $processCmd -ArgumentList "-ExecutionPolicy Bypass -NoProfile -Command `"$script`"" -Verb RunAs -ErrorAction Stop
+        }
     }
-    else {
-        Start-Process $processCmd -ArgumentList "-ExecutionPolicy Bypass -NoProfile -Command `"$script`"" -Verb RunAs
+    catch {
+        # UAC declined or the launch failed, so do not leave the staged copy behind.
+        if ($stagedScript) { Remove-Item -LiteralPath $stagedScript -Force -ErrorAction SilentlyContinue }
+        throw
     }
 
     break
