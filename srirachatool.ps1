@@ -3382,6 +3382,13 @@ function Invoke-WPFButton {
         "WPFPanelprinter" { Invoke-WPFControlPanel -Panel $button }
         "WPFPanelsystem" { Invoke-WPFControlPanel -Panel $button }
         "WPFPaneluser" { Invoke-WPFControlPanel -Panel $button }
+        "WPFPanelFirewall" { Invoke-WPFControlPanel -Panel $button }
+        "WPFPanelMouse" { Invoke-WPFControlPanel -Panel $button }
+        "WPFPanelPrograms" { Invoke-WPFControlPanel -Panel $button }
+        "WPFPanelSecurity" { Invoke-WPFControlPanel -Panel $button }
+        "WPFFixesNTPPool" { Invoke-WPFFixesNTPPool }
+        "WPFExpandAllCategories" { Invoke-WPFToggleAllCategories -Expand $true }
+        "WPFCollapseAllCategories" { Invoke-WPFToggleAllCategories -Expand $false }
         "WPFUpdatesdefault" { Invoke-WPFFixesUpdate }
         "WPFActivator" { Invoke-WPFActivator }
         "WPFFixesUpdate" { Invoke-WPFFixesUpdate }
@@ -3411,6 +3418,48 @@ function Invoke-WPFCloseButton {
     $sync["Form"].Close()
     Write-Host "Bye bye!"
 }
+function Invoke-WPFToggleAllCategories {
+    <#
+
+    .SYNOPSIS
+        Expands or collapses every category on the Apps tab at once
+
+    .PARAMETER Expand
+        True to expand every category, false to collapse them
+
+    #>
+    param([bool]$Expand)
+
+    # Reuse the search index so this does not walk every form object again
+    $null = Get-AppsSearchIndex
+
+    foreach ($category in $sync.AppsCategories) {
+        $panel = $sync[$category]
+        if ($panel -is [System.Windows.Controls.Expander]) {
+            $panel.IsExpanded = $Expand
+        }
+    }
+}
+
+function Invoke-WPFFixesNTPPool {
+    <#
+
+    .SYNOPSIS
+        Points Windows time sync at pool.ntp.org
+
+    #>
+    try {
+        Write-Host "Setting the time server to pool.ntp.org..."
+        $null = w32tm /config /manualpeerlist:"0.pool.ntp.org,1.pool.ntp.org,2.pool.ntp.org,3.pool.ntp.org" /syncfromflags:manual /reliable:YES /update
+        Start-Service w32time -ErrorAction SilentlyContinue
+        $null = w32tm /resync /force
+        Write-Host "Time server updated and clock resynced."
+    }
+    catch {
+        Write-Host "Could not update the time server: $_" -ForegroundColor Red
+    }
+}
+
 function Invoke-WPFControlPanel {
     <#
 
@@ -3428,6 +3477,10 @@ function Invoke-WPFControlPanel {
         "WPFPanelnetwork" { cmd /c ncpa.cpl }
         "WPFPanelpower" { cmd /c powercfg.cpl }
         "WPFPanelregion" { cmd /c intl.cpl }
+        "WPFPanelFirewall" { cmd /c firewall.cpl }
+        "WPFPanelMouse" { cmd /c main.cpl }
+        "WPFPanelPrograms" { cmd /c appwiz.cpl }
+        "WPFPanelSecurity" { cmd /c wscui.cpl }
         "WPFPanelsound" { cmd /c mmsys.cpl }
         "WPFPanelprinter" { Start-Process "shell:::{A8A91A66-3A7D-4424-8D24-04E180695C7A}" }
         "WPFPanelsystem" { cmd /c sysdm.cpl }
@@ -9394,6 +9447,21 @@ $sync.configs.appnavigation = @'
     "Type": "Button",
     "Order": "3",
     "Description": "Show the selected applications"
+  },
+
+  "WPFExpandAllCategories": {
+    "Content": "Expand All Categories",
+    "Category": "__Selection",
+    "Type": "Button",
+    "Order": "4",
+    "Description": "Expand every application category"
+  },
+  "WPFCollapseAllCategories": {
+    "Content": "Collapse All Categories",
+    "Category": "__Selection",
+    "Type": "Button",
+    "Order": "5",
+    "Description": "Collapse every application category"
   }
 }
 '@ | ConvertFrom-Json
@@ -9765,6 +9833,43 @@ $sync.configs.feature = @'
     "category": "Remote Access",
     "panel": "2",
     "Order": "a084_",
+    "Type": "Button",
+    "ButtonWidth": "300"
+  },
+
+  "WPFPanelFirewall": {
+    "Content": "Windows Defender Firewall",
+    "category": "Legacy Windows Panels",
+    "panel": "2",
+    "Type": "Button",
+    "ButtonWidth": "300"
+  },
+  "WPFPanelMouse": {
+    "Content": "Mouse Properties",
+    "category": "Legacy Windows Panels",
+    "panel": "2",
+    "Type": "Button",
+    "ButtonWidth": "300"
+  },
+  "WPFPanelPrograms": {
+    "Content": "Programs and Features",
+    "category": "Legacy Windows Panels",
+    "panel": "2",
+    "Type": "Button",
+    "ButtonWidth": "300"
+  },
+  "WPFPanelSecurity": {
+    "Content": "Security and Maintenance",
+    "category": "Legacy Windows Panels",
+    "panel": "2",
+    "Type": "Button",
+    "ButtonWidth": "300"
+  },
+  "WPFFixesNTPPool": {
+    "Content": "NTP Server - Enable",
+    "Description": "Points Windows time sync at pool.ntp.org instead of time.windows.com, which keeps the clock closer to correct.",
+    "category": "Fixes",
+    "panel": "1",
     "Type": "Button",
     "ButtonWidth": "300"
   }
