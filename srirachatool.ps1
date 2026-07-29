@@ -11895,13 +11895,6 @@ $sync.configs.tweaks = @'
         "Type": "DWord"
       },
       {
-        "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem",
-        "OriginalValue": "0",
-        "Name": "LongPathsEnabled",
-        "Value": "1",
-        "Type": "DWord"
-      },
-      {
         "_Comment": "Driver searching is a function that should be left in",
         "Path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\DriverSearching",
         "OriginalValue": "1",
