@@ -15584,7 +15584,7 @@ $inputXML = @'
                                              <Path Stroke="{StaticResource TextSecondary}" StrokeThickness="2" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent" Data="M 21 21 L 16.66 16.66 M 11 19 A 8 8 0 1 0 11 3 A 8 8 0 0 0 11 19 Z"/>
                                          </Canvas>
                                      </Viewbox>
-                                     <Button x:Name="SearchBarClearButton" Content="✕" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Right" Visibility="Collapsed" WindowChrome.IsHitTestVisibleInChrome="True"/>
+                                     <Button x:Name="SearchBarClearButton" Content="&#x2715;" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Right" Visibility="Collapsed" WindowChrome.IsHitTestVisibleInChrome="True"/>
                                  </Grid>
                              </Border>
                              
@@ -15592,7 +15592,7 @@ $inputXML = @'
                                  <Button.Template>
                                      <ControlTemplate TargetType="Button">
                                          <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6">
-                                             <TextBlock Text="✕" Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16"/>
+                                             <TextBlock Text="&#x2715;" Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16"/>
                                          </Border>
                                          <ControlTemplate.Triggers>
                                              <Trigger Property="IsMouseOver" Value="True">
@@ -15674,7 +15674,7 @@ $inputXML = @'
                                         <StackPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                                                 <TextBlock Text="System Overview" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
-                                                <TextBlock Name="SysRefreshIndicator" Text=" ●" FontSize="12" Foreground="{StaticResource Accent}" VerticalAlignment="Center" Opacity="0.6"/>
+                                                <TextBlock Name="SysRefreshIndicator" Text=" &#x25CF;" FontSize="12" Foreground="{StaticResource Accent}" VerticalAlignment="Center" Opacity="0.6"/>
                                             </StackPanel>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
@@ -15925,9 +15925,9 @@ $inputXML = @'
                                                 <Path Data="{StaticResource IconRefresh}" Stroke="{StaticResource Success}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="Uniform" Width="32" Height="32" Margin="0,0,0,15"/>
                                                 <TextBlock Text="Default Settings" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,8"/>
                                                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0,0,0,15">Restores Windows Update to factory defaults. All updates download and install automatically, including feature updates and drivers.</TextBlock>
-                                                <TextBlock Text="✓ Automatic security patches" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,3"/>
-                                                <TextBlock Text="✓ Feature updates enabled" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,3"/>
-                                                <TextBlock Text="✓ Driver updates enabled" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,15"/>
+                                                <TextBlock Text="&#x2713; Automatic security patches" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,3"/>
+                                                <TextBlock Text="&#x2713; Feature updates enabled" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,3"/>
+                                                <TextBlock Text="&#x2713; Driver updates enabled" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,15"/>
                                                 <Button Name="WPFFixesUpdate" Content="Apply Default" Style="{StaticResource GlassButton}" HorizontalAlignment="Stretch"/>
                                             </StackPanel>
                                         </Border>
@@ -15938,9 +15938,9 @@ $inputXML = @'
                                                 <Path Data="{StaticResource IconShield}" Stroke="{StaticResource Accent}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="Uniform" Width="32" Height="32" Margin="0,0,0,15"/>
                                                 <TextBlock Text="Security Only" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,8"/>
                                                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0,0,0,15">Recommended balance. Only critical security patches install automatically. Feature updates and optional drivers are blocked.</TextBlock>
-                                                <TextBlock Text="✓ Security patches only" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,3"/>
-                                                <TextBlock Text="✕ No feature updates" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,3"/>
-                                                <TextBlock Text="✕ No automatic drivers" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,15"/>
+                                                <TextBlock Text="&#x2713; Security patches only" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,3"/>
+                                                <TextBlock Text="&#x2715; No feature updates" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,3"/>
+                                                <TextBlock Text="&#x2715; No automatic drivers" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,15"/>
                                                 <Button Name="WPFUpdatessecurity" Content="Apply Security Only" Style="{StaticResource GlassButton}" HorizontalAlignment="Stretch"/>
                                             </StackPanel>
                                         </Border>
@@ -15951,9 +15951,9 @@ $inputXML = @'
                                                 <Path Data="{StaticResource IconX}" Stroke="{StaticResource Danger}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="Uniform" Width="32" Height="32" Margin="0,0,0,15"/>
                                                 <TextBlock Text="Disable All Updates" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,8"/>
                                                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0,0,0,15">Completely stops Windows Update service. No updates will download or install. Not recommended for most users.</TextBlock>
-                                                <TextBlock Text="✕ No security patches" FontSize="11" Foreground="{StaticResource Danger}" Margin="0,0,0,3"/>
-                                                <TextBlock Text="✕ No feature updates" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,3"/>
-                                                <TextBlock Text="✕ System vulnerable" FontSize="11" Foreground="{StaticResource Danger}" Margin="0,0,0,15"/>
+                                                <TextBlock Text="&#x2715; No security patches" FontSize="11" Foreground="{StaticResource Danger}" Margin="0,0,0,3"/>
+                                                <TextBlock Text="&#x2715; No feature updates" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,3"/>
+                                                <TextBlock Text="&#x2715; System vulnerable" FontSize="11" Foreground="{StaticResource Danger}" Margin="0,0,0,15"/>
                                                 <Button Name="WPFUpdatesdisable" Content="Disable Updates" Style="{StaticResource GlassButton}" Background="{StaticResource Danger}" Foreground="White" HorizontalAlignment="Stretch"/>
                                             </StackPanel>
                                         </Border>
