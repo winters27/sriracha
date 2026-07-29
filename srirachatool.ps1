@@ -13098,6 +13098,436 @@ $sync.configs.tweaks = @'
         "Type": "DWord"
       }
     ]
+  },
+
+  "WPFTweaksAppxMicrosoftWindowsFeedbackHub": {
+    "Content": "Feedback Hub",
+    "Description": "Allows users to submit bug reports, feature suggestions, and diagnostic data directly to Microsoft. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a001_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.WindowsFeedbackHub\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.WindowsFeedbackHub\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9NBLGGH4R32N --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftGetHelp": {
+    "Content": "Get Help",
+    "Description": "Provides access to automated troubleshooting guides, support documentation, and direct Microsoft customer assistance. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a002_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.GetHelp\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.GetHelp\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9PKDZBMV1H3T --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftMicrosoftOfficeHub": {
+    "Content": "Microsoft 365",
+    "Description": "Serves as a centralized launcher and dashboard for accessing cloud-based Microsoft 365 apps and recent documents. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a003_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.MicrosoftOfficeHub\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.MicrosoftOfficeHub\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9WZDNCRD29V9 --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMSTeams": {
+    "Content": "Microsoft Teams",
+    "Description": "Facilitates instant messaging, video conferencing, file sharing, and workspace collaboration. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a004_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"MSTeams\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"MSTeams\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id XP8BT8DW290MPQ --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftOutlookForWindows": {
+    "Content": "Outlook for Windows",
+    "Description": "Provides modern email management, calendar scheduling, and contact organization features. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a005_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.OutlookForWindows\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.OutlookForWindows\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9NRX63209R7B --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftWindowsCrossDevice": {
+    "Content": "Mobile Devices",
+    "Description": "Manages system-level background connectivity with paired mobile devices. Removing this may disable cross-device features such as phone screen mirroring, file transfer, and mobile hotspot handoff integrated into Windows Settings. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a006_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"MicrosoftWindows.CrossDevice\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"MicrosoftWindows.CrossDevice\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9NTXGKQ8P7N0 --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftYourPhone": {
+    "Content": "Phone Link",
+    "Description": "Synchronizes text messages, phone notifications, photos, and calls from a mobile device to the desktop. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a007_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.YourPhone\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.YourPhone\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9NMPJ99VJBWV --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftWindowsCalculator": {
+    "Content": "Calculator",
+    "Description": "Performs standard arithmetic, scientific operations, programming calculations, and unit conversions. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a008_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.WindowsCalculator\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.WindowsCalculator\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9WZDNCRFHVN5 --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftWindowsCamera": {
+    "Content": "Camera",
+    "Description": "Captures photographs and records video files via connected webcams or imaging hardware. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a009_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.WindowsCamera\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.WindowsCamera\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9WZDNCRFJBBG --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxClipchampClipchamp": {
+    "Content": "Clipchamp",
+    "Description": "Provides a user-friendly video editor with built-in templates, effects, and timeline editing tools. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a010_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Clipchamp.Clipchamp\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Clipchamp.Clipchamp\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9P1J8S7CCWWT --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftWindowsAlarms": {
+    "Content": "Clock",
+    "Description": "Features world clocks, alarms, countdown timers, stopwatches, and dedicated focus session tracking. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a011_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.WindowsAlarms\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.WindowsAlarms\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9WZDNCRFJ3PR --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftZuneMusic": {
+    "Content": "Media Player",
+    "Description": "Plays local audio and video files with modern playlist management and casting capabilities. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a012_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.ZuneMusic\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.ZuneMusic\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9WZDNCRFJ3PT --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftWindowsNotepad": {
+    "Content": "Notepad",
+    "Description": "Provides a lightweight text editor with multi-tab support for plain text files and code snippets. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a013_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.WindowsNotepad\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.WindowsNotepad\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9MSMLRH6LZF3 --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftPaint": {
+    "Content": "Paint",
+    "Description": "Provides built-in digital sketching, basic image editing, and pixel-level graphic manipulation tools. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a014_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.Paint\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.Paint\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9PCFS5B6T72H --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftWindowsPhotos": {
+    "Content": "Photos",
+    "Description": "Organizes, views, and crops local images with basic color adjustment and album creation tools. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a015_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.Windows.Photos\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.Windows.Photos\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9WZDNCRFJBH4 --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftCorporationIIQuickAssist": {
+    "Content": "Quick Assist",
+    "Description": "Enables secure remote technical support and screen sharing over an internet connection. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a016_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"MicrosoftCorporationII.QuickAssist\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"MicrosoftCorporationII.QuickAssist\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9P7BP5VNWKX5 --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftScreenSketch": {
+    "Content": "Snipping Tool",
+    "Description": "Captures screenshots or screen recordings with built-in markup, image cropping, and optical character recognition (OCR). Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a017_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.ScreenSketch\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.ScreenSketch\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9MZ95KL8MR0L --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftWindowsSoundRecorder": {
+    "Content": "Sound Recorder",
+    "Description": "Records and trims live audio inputs with simple microphone adjustment controls. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a018_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.WindowsSoundRecorder\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.WindowsSoundRecorder\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9WZDNCRFHWKN --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftMicrosoftStickyNotes": {
+    "Content": "Sticky Notes",
+    "Description": "Creates quick, floating text notes on the desktop that automatically sync across devices. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a019_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.MicrosoftStickyNotes\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.MicrosoftStickyNotes\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9NBLGGH4QGHW --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftTodos": {
+    "Content": "To Do",
+    "Description": "Creates, tracks, and synchronizes personal tasks, smart lists, and daily reminders. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a020_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.Todos\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.Todos\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9NBLGGH5R558 --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftBingSearch": {
+    "Content": "Bing Search",
+    "Description": "Integrates Microsoft Bing search capabilities and web services directly into the operating system. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a021_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.BingSearch\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.BingSearch\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9NZBF4GT040C --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftCopilot": {
+    "Content": "Copilot",
+    "Description": "Launches the Microsoft AI companion for contextual answers, creative writing assistance, and intelligent web search. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a022_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.Copilot\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.Copilot\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9NHT9RB2F4HD --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftBingNews": {
+    "Content": "News",
+    "Description": "Aggregates breaking news headlines, personalized article feeds, and world current events. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a023_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.BingNews\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.BingNews\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9WZDNCRFHVFW --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftStartExperiencesApp": {
+    "Content": "Start Experiences App",
+    "Description": "Powers the Windows Widgets board, delivering a personalized feed of news, weather, sports, and finance content. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a024_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.StartExperiencesApp\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.StartExperiencesApp\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9PC1H9VN18CM --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftBingWeather": {
+    "Content": "Weather",
+    "Description": "Displays local real-time weather tracking, radar maps, and historical meteorological forecasts. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a025_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.BingWeather\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.BingWeather\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9WZDNCRFJ3Q2 --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftWindowsDevHome": {
+    "Content": "Dev Home",
+    "Description": "Provides a specialized dashboard for software developer environment setups, repository syncing, and hardware widgets. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a026_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.Windows.DevHome\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.Windows.DevHome\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9N8MHTPHNGVV --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftPowerAutomateDesktop": {
+    "Content": "Power Automate",
+    "Description": "Automates repetitive workflows and desktop tasks using low-code visual scripting. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a027_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.PowerAutomateDesktop\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.PowerAutomateDesktop\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9NFTCH6J7FHV --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftMicrosoftSolitaireCollection": {
+    "Content": "Solitaire Collection",
+    "Description": "Bundles built-in card game modes including Klondike, Spider, FreeCell, Pyramid, and TriPeaks alongside daily challenges. Restore re-registers the local package if its files are still present.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a028_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.MicrosoftSolitaireCollection\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.MicrosoftSolitaireCollection\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.MicrosoftSolitaireCollection\" | ForEach-Object { Add-AppxPackage -DisableDevelopmentMode -Register (Join-Path $_.InstallLocation \"AppxManifest.xml\") -ErrorAction SilentlyContinue }'"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftGamingApp": {
+    "Content": "Xbox App",
+    "Description": "Serves as the primary gaming library manager, social community interface, and PC Game Pass dashboard. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a029_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.GamingApp\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.GamingApp\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9MV0B5HZVK9Z --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftXboxGamingOverlay": {
+    "Content": "Xbox Game Bar",
+    "Description": "Provides customizable in-game status widgets, audio balancing sliders, system monitoring tools, and gameplay recording. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a030_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.XboxGamingOverlay\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.XboxGamingOverlay\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9NZKPSTSNW4P --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftXboxIdentityProvider": {
+    "Content": "Xbox Identity Provider",
+    "Description": "Manages Xbox network user authentication and background account validation for connected titles. Warning: removing this may break Microsoft account sign-in for non-Xbox games and apps that rely on this authentication pipeline. Reinstallable from the Microsoft Store.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a031_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.XboxIdentityProvider\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.XboxIdentityProvider\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "winget install --id 9WZDNCRD1HKW --source msstore --accept-package-agreements --accept-source-agreements --silent"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftXboxSpeechToTextOverlay": {
+    "Content": "Xbox Speech To Text Overlay",
+    "Description": "Provides system-level live accessibility captions and voice-to-text translation for gaming chat networks. Restore re-registers the local package if its files are still present.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a032_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.XboxSpeechToTextOverlay\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.XboxSpeechToTextOverlay\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.XboxSpeechToTextOverlay\" | ForEach-Object { Add-AppxPackage -DisableDevelopmentMode -Register (Join-Path $_.InstallLocation \"AppxManifest.xml\") -ErrorAction SilentlyContinue }'"
+    ]
+  },
+  "WPFTweaksAppxMicrosoftXboxTCUI": {
+    "Content": "Xbox TCUI",
+    "Description": "Provides core account connection UI modules for single sign-on flows within game titles. Warning: removing this may break Microsoft account authentication in games and apps that do not otherwise require the Xbox app. Restore re-registers the local package if its files are still present.",
+    "category": "Built-in Apps",
+    "panel": "2",
+    "Order": "a033_",
+    "InvokeScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.Xbox.TCUI\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"Microsoft.Xbox.TCUI\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
+    ],
+    "UndoScript": [
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.Xbox.TCUI\" | ForEach-Object { Add-AppxPackage -DisableDevelopmentMode -Register (Join-Path $_.InstallLocation \"AppxManifest.xml\") -ErrorAction SilentlyContinue }'"
+    ]
   }
 }
 '@ | ConvertFrom-Json
