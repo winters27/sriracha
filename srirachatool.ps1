@@ -4495,257 +4495,211 @@ function Set-AppsCategoryBadge {
         }
     }
 }
+function Get-AppsSearchIndex {
+    <#
+    .SYNOPSIS
+        Builds the Apps-tab search index once and reuses it
+
+    .DESCRIPTION
+        The list of app checkboxes never changes after the tab renders, so walking
+        every form object and lowercasing every string on each keystroke is wasted
+        work. This caches the element references and the already-lowercased text.
+    #>
+    if ($sync.AppsSearchIndex) { return $sync.AppsSearchIndex }
+
+    $index = [System.Collections.Generic.List[psobject]]::new()
+    $totals = @{}
+
+    foreach ($name in $sync.configs.applications.PSObject.Properties.Name) {
+        $checkBox = $sync[$name]
+        if (-not $checkBox) { continue }
+
+        $config = $sync.configs.applications.$name
+        $element = if ($sync["${name}Container"]) { $sync["${name}Container"] } else { $checkBox }
+
+        $index.Add([pscustomobject]@{
+            Element     = $element
+            Category    = $config.Category
+            Content     = if ($config.Content) { $config.Content.ToLower() } else { "" }
+            Description = if ($config.Description) { $config.Description.ToLower() } else { "" }
+        })
+
+        if ($config.Category) { $totals[$config.Category] = [int]$totals[$config.Category] + 1 }
+    }
+
+    # Only cache once the tab has actually rendered. Caching an empty result during
+    # startup would make the search permanently dead.
+    if ($index.Count -gt 0) {
+        $sync.AppsSearchIndex = $index
+        $sync.AppsCategoryTotals = $totals
+        $sync.AppsCategories = @($totals.Keys)
+    }
+    return $index
+}
+
+function Set-ElementVisibility {
+    <#
+    .SYNOPSIS
+        Assigns Visibility only when it actually differs
+
+    .DESCRIPTION
+        Every assignment invalidates layout even when the value is unchanged, which
+        is what makes filtering hundreds of rows feel heavy.
+    #>
+    param($Element, [string]$State)
+
+    if ($Element -and $Element.Visibility -ne $State) { $Element.Visibility = $State }
+}
+
 function Find-AppsByNameOrDescription {
     <#
     .SYNOPSIS
         Filters applications in the Apps tab based on search string
-    
+
     .PARAMETER SearchString
         The string to search for in app names and descriptions
-    
-    .DESCRIPTION
-        This function filters the application checkboxes based on the search string.
-        It searches both the app name (Content) and description (ToolTip).
     #>
     param([string]$SearchString)
-    
-    $filter = Get-SrirachaToolVariables -Type CheckBox | Where-Object { $psitem -like "WPFInstall*" }
-    
-    if ([string]::IsNullOrWhiteSpace($SearchString)) {
-        # Show all apps when search is empty
-        foreach ($checkboxName in $filter) {
-            $containerName = $checkboxName + "Container"
-            if ($sync[$containerName]) {
-                $sync[$containerName].Visibility = "Visible"
-            }
-            elseif ($sync[$checkboxName]) {
-                $sync[$checkboxName].Visibility = "Visible"
-            }
-        }
-        
-        # Show all categories
-        $allCategories = $sync.configs.applications.PSObject.Properties.Name | 
-        ForEach-Object { $sync.configs.applications.$_.Category } | 
-        Select-Object -Unique
-        
-        # Total app count per category, to restore the header badges on clear
-        $totalCounts = @{}
-        foreach ($appName in $sync.configs.applications.PSObject.Properties.Name) {
-            $cat = $sync.configs.applications.$appName.Category
-            if ($cat) { $totalCounts[$cat] = [int]$totalCounts[$cat] + 1 }
-        }
 
-        foreach ($category in $allCategories) {
-            if ($sync[$category]) {
-                $sync[$category].Visibility = "Visible"
-                # Collapse expanders and restore the total-count badge when clearing search
-                if ($sync[$category] -is [System.Windows.Controls.Expander]) {
-                    $sync[$category].IsExpanded = $false
-                    Set-AppsCategoryBadge -category $category -count $totalCounts[$category]
-                }
+    $index = Get-AppsSearchIndex
+
+    if ([string]::IsNullOrWhiteSpace($SearchString)) {
+        foreach ($entry in $index) { Set-ElementVisibility -Element $entry.Element -State "Visible" }
+
+        foreach ($category in $sync.AppsCategories) {
+            $panel = $sync[$category]
+            if (-not $panel) { continue }
+            Set-ElementVisibility -Element $panel -State "Visible"
+            if ($panel -is [System.Windows.Controls.Expander]) {
+                $panel.IsExpanded = $false
+                Set-AppsCategoryBadge -category $category -count $sync.AppsCategoryTotals[$category]
             }
+        }
+        return
+    }
+
+    $textToSearch = $SearchString.ToLower()
+    $matchCounts = @{}
+
+    foreach ($entry in $index) {
+        if ($entry.Content.Contains($textToSearch) -or $entry.Description.Contains($textToSearch)) {
+            Set-ElementVisibility -Element $entry.Element -State "Visible"
+            if ($entry.Category) { $matchCounts[$entry.Category] = [int]$matchCounts[$entry.Category] + 1 }
+        }
+        else {
+            Set-ElementVisibility -Element $entry.Element -State "Collapsed"
         }
     }
-    else {
-        $textToSearch = $SearchString.ToLower()
-        $activeApplications = @()
-        
-        foreach ($checkboxName in $filter) {
-            $checkBox = $sync[$checkboxName]
-            if ($checkBox -eq $null) { continue }
-            
-            $containerName = $checkboxName + "Container"
-            $appConfig = $sync.configs.applications.$checkboxName
-            
-            # Search in content and description
-            $matchFound = $false
-            if ($appConfig) {
-                $matchFound = ($appConfig.Content -and $appConfig.Content.ToLower().Contains($textToSearch)) -or
-                ($appConfig.Description -and $appConfig.Description.ToLower().Contains($textToSearch))
-            }
-            
-            if ($matchFound) {
-                if ($sync[$containerName]) {
-                    $sync[$containerName].Visibility = "Visible"
-                }
-                else {
-                    $checkBox.Visibility = "Visible"
-                }
-                $activeApplications += $appConfig
-            }
-            else {
-                if ($sync[$containerName]) {
-                    $sync[$containerName].Visibility = "Collapsed"
-                }
-                else {
-                    $checkBox.Visibility = "Collapsed"
-                }
-            }
-        }
-        
-        # Show/hide categories based on active applications
-        $activeCategories = $activeApplications | Select-Object -ExpandProperty Category -Unique
-        $allCategories = $sync.configs.applications.PSObject.Properties.Name | 
-        ForEach-Object { $sync.configs.applications.$_.Category } | 
-        Select-Object -Unique
-        
-        if ($activeCategories) {
-            # Count matches per category; only auto-expand when a single category matches
-            $matchCounts = @{}
-            foreach ($app in $activeApplications) {
-                if ($app.Category) { $matchCounts[$app.Category] = [int]$matchCounts[$app.Category] + 1 }
-            }
-            $singleMatch = (@($activeCategories).Count -eq 1)
 
-            foreach ($category in $activeCategories) {
-                if ($sync[$category]) {
-                    $sync[$category].Visibility = "Visible"
-                    if ($sync[$category] -is [System.Windows.Controls.Expander]) {
-                        # Expand only when this is the one and only matching category
-                        $sync[$category].IsExpanded = $singleMatch
-                        Set-AppsCategoryBadge -category $category -count $matchCounts[$category]
-                    }
-                }
-            }
-            
-            # Only call Compare-Object if we have active categories
-            $inactiveCategories = Compare-Object -ReferenceObject $allCategories -DifferenceObject $activeCategories -PassThru
-            foreach ($category in $inactiveCategories) {
-                if ($sync[$category]) {
-                    $sync[$category].Visibility = "Collapsed"
-                }
+    # Expand only when a single category matches, so searching does not open everything
+    $singleMatch = ($matchCounts.Count -eq 1)
+
+    foreach ($category in $sync.AppsCategories) {
+        $panel = $sync[$category]
+        if (-not $panel) { continue }
+
+        if ($matchCounts.ContainsKey($category)) {
+            Set-ElementVisibility -Element $panel -State "Visible"
+            if ($panel -is [System.Windows.Controls.Expander]) {
+                $panel.IsExpanded = $singleMatch
+                Set-AppsCategoryBadge -category $category -count $matchCounts[$category]
             }
         }
         else {
-            # No matches found - hide all categories
-            foreach ($category in $allCategories) {
-                if ($sync[$category]) {
-                    $sync[$category].Visibility = "Collapsed"
-                }
-            }
+            Set-ElementVisibility -Element $panel -State "Collapsed"
         }
     }
+}
+
+
+function Get-TweaksSearchIndex {
+    <#
+    .SYNOPSIS
+        Builds the Tweaks-tab search index once and reuses it
+
+    .DESCRIPTION
+        Same reasoning as Get-AppsSearchIndex: the checkbox set is fixed after the
+        tab renders, so resolve elements and lowercase the text a single time.
+    #>
+    if ($sync.TweaksSearchIndex) { return $sync.TweaksSearchIndex }
+
+    $index = [System.Collections.Generic.List[psobject]]::new()
+    $categories = [System.Collections.Generic.List[string]]::new()
+
+    foreach ($name in $sync.configs.tweaks.PSObject.Properties.Name) {
+        $checkBox = $sync[$name]
+        if (-not $checkBox) { continue }
+
+        $config = $sync.configs.tweaks.$name
+
+        # Toggles sit in a DockPanel that has to travel with them
+        $element = if ($sync["${name}Container"]) { $sync["${name}Container"] }
+                   elseif ($checkBox.Parent -is [System.Windows.Controls.DockPanel]) { $checkBox.Parent }
+                   else { $checkBox }
+
+        $index.Add([pscustomobject]@{
+            Element     = $element
+            CheckBox    = $checkBox
+            Category    = $config.Category
+            Content     = if ($config.Content) { $config.Content.ToLower() } else { "" }
+            Description = if ($config.Description) { $config.Description.ToLower() } else { "" }
+        })
+
+        if ($config.Category -and -not $categories.Contains($config.Category)) {
+            $categories.Add($config.Category)
+        }
+    }
+
+    if ($index.Count -gt 0) {
+        $sync.TweaksSearchIndex = $index
+        $sync.TweaksCategories = @($categories)
+    }
+    return $index
 }
 
 function Find-TweaksByNameOrDescription {
     <#
     .SYNOPSIS
         Filters tweaks in the Tweaks tab based on search string
-    
+
     .PARAMETER SearchString
         The string to search for in tweak names and descriptions
-    
-    .DESCRIPTION
-        This function filters the tweak checkboxes based on the search string.
-        It searches both the tweak name (Content) and description (ToolTip).
     #>
     param([string]$SearchString)
-    
-    $filter = Get-SrirachaToolVariables -Type CheckBox | Where-Object { $psitem -like "WPFTweak*" -or $psitem -like "WPFToggle*" }
-    
+
+    $index = Get-TweaksSearchIndex
+
     if ([string]::IsNullOrWhiteSpace($SearchString)) {
-        # Show all tweaks when search is empty
-        foreach ($checkboxName in $filter) {
-            $containerName = $checkboxName + "Container"
-            if ($sync[$containerName]) {
-                $sync[$containerName].Visibility = "Visible"
-            }
-            elseif ($sync[$checkboxName]) {
-                $sync[$checkboxName].Visibility = "Visible"
-                # Also show parent if it's in a DockPanel (for Toggle switches)
-                if ($sync[$checkboxName].Parent -is [System.Windows.Controls.DockPanel]) {
-                    $sync[$checkboxName].Parent.Visibility = "Visible"
-                }
-            }
+        foreach ($entry in $index) {
+            Set-ElementVisibility -Element $entry.Element -State "Visible"
+            Set-ElementVisibility -Element $entry.CheckBox -State "Visible"
         }
-        
-        # Show all categories
-        $allCategories = $sync.configs.tweaks.PSObject.Properties.Name | 
-        ForEach-Object { $sync.configs.tweaks.$_.Category } | 
-        Select-Object -Unique
-        
-        foreach ($category in $allCategories) {
-            if ($sync[$category]) {
-                $sync[$category].Visibility = "Visible"
-            }
+        foreach ($category in $sync.TweaksCategories) {
+            Set-ElementVisibility -Element $sync[$category] -State "Visible"
         }
+        return
     }
-    else {
-        $textToSearch = $SearchString.ToLower()
-        $activeTweaks = @()
-        
-        foreach ($checkboxName in $filter) {
-            $checkBox = $sync[$checkboxName]
-            if ($checkBox -eq $null) { continue }
-            
-            $containerName = $checkboxName + "Container"
-            $tweakConfig = $sync.configs.tweaks.$checkboxName
-            
-            # Search in content and description
-            $matchFound = $false
-            if ($tweakConfig) {
-                $matchFound = ($tweakConfig.Content -and $tweakConfig.Content.ToLower().Contains($textToSearch)) -or
-                ($tweakConfig.Description -and $tweakConfig.Description.ToLower().Contains($textToSearch))
-            }
-            
-            if ($matchFound) {
-                if ($sync[$containerName]) {
-                    $sync[$containerName].Visibility = "Visible"
-                }
-                else {
-                    $checkBox.Visibility = "Visible"
-                    # Also show parent if it's in a DockPanel (for Toggle switches)
-                    if ($checkBox.Parent -is [System.Windows.Controls.DockPanel]) {
-                        $checkBox.Parent.Visibility = "Visible"
-                    }
-                }
-                $activeTweaks += $tweakConfig
-            }
-            else {
-                if ($sync[$containerName]) {
-                    $sync[$containerName].Visibility = "Collapsed"
-                }
-                else {
-                    $checkBox.Visibility = "Collapsed"
-                    # Also hide parent if it's in a DockPanel (for Toggle switches)
-                    if ($checkBox.Parent -is [System.Windows.Controls.DockPanel]) {
-                        $checkBox.Parent.Visibility = "Collapsed"
-                    }
-                }
-            }
-        }
-        
-        # Show/hide categories based on active tweaks
-        $activeCategories = $activeTweaks | Select-Object -ExpandProperty Category -Unique
-        $allCategories = $sync.configs.tweaks.PSObject.Properties.Name | 
-        ForEach-Object { $sync.configs.tweaks.$_.Category } | 
-        Select-Object -Unique
-        
-        if ($activeCategories) {
-            foreach ($category in $activeCategories) {
-                if ($sync[$category]) {
-                    $sync[$category].Visibility = "Visible"
-                }
-            }
-            
-            # Only call Compare-Object if we have active categories
-            $inactiveCategories = Compare-Object -ReferenceObject $allCategories -DifferenceObject $activeCategories -PassThru
-            foreach ($category in $inactiveCategories) {
-                if ($sync[$category]) {
-                    $sync[$category].Visibility = "Collapsed"
-                }
-            }
+
+    $textToSearch = $SearchString.ToLower()
+    $matched = @{}
+
+    foreach ($entry in $index) {
+        if ($entry.Content.Contains($textToSearch) -or $entry.Description.Contains($textToSearch)) {
+            Set-ElementVisibility -Element $entry.Element -State "Visible"
+            Set-ElementVisibility -Element $entry.CheckBox -State "Visible"
+            if ($entry.Category) { $matched[$entry.Category] = $true }
         }
         else {
-            # No matches found - hide all categories
-            foreach ($category in $allCategories) {
-                if ($sync[$category]) {
-                    $sync[$category].Visibility = "Collapsed"
-                }
-            }
+            Set-ElementVisibility -Element $entry.Element -State "Collapsed"
         }
     }
+
+    foreach ($category in $sync.TweaksCategories) {
+        $state = if ($matched.ContainsKey($category)) { "Visible" } else { "Collapsed" }
+        Set-ElementVisibility -Element $sync[$category] -State $state
+    }
 }
+
 
 function Invoke-WPFTab {
 
@@ -16210,6 +16164,21 @@ $labels = @{}
 
 $allCategories = $checkBoxes.Name | ForEach-Object { $sync.configs.applications.$_ } | Select-Object  -Unique -ExpandProperty category
 
+# Filtering runs on a short timer rather than per keystroke, so typing a word
+# costs one pass instead of one per letter.
+$sync.SearchDebounce = New-Object System.Windows.Threading.DispatcherTimer
+$sync.SearchDebounce.Interval = [TimeSpan]::FromMilliseconds(180)
+$sync.SearchDebounce.Add_Tick({
+        $sync.SearchDebounce.Stop()
+
+        if ($sync.currentTab -eq "Install") {
+            Find-AppsByNameOrDescription -SearchString $sync.SearchBar.Text
+        }
+        elseif ($sync.currentTab -eq "Tweaks") {
+            Find-TweaksByNameOrDescription -SearchString $sync.SearchBar.Text
+        }
+    })
+
 $sync["SearchBar"].Add_TextChanged({
         if ($sync.SearchBar.Text -ne "") {
             $sync.SearchBarClearButton.Visibility = "Visible"
@@ -16218,13 +16187,9 @@ $sync["SearchBar"].Add_TextChanged({
             $sync.SearchBarClearButton.Visibility = "Collapsed"
         }
 
-        # Determine which tab is currently active and call the appropriate filter function
-        if ($sync.currentTab -eq "Install") {
-            Find-AppsByNameOrDescription -SearchString $sync.SearchBar.Text
-        }
-        elseif ($sync.currentTab -eq "Tweaks") {
-            Find-TweaksByNameOrDescription -SearchString $sync.SearchBar.Text
-        }
+        # Restart the timer; the filter fires once typing pauses
+        $sync.SearchDebounce.Stop()
+        $sync.SearchDebounce.Start()
     })
 
 $sync["Form"].Add_Loaded({
