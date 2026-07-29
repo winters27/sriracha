@@ -13528,6 +13528,350 @@ $sync.configs.tweaks = @'
     "UndoScript": [
       "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.Xbox.TCUI\" | ForEach-Object { Add-AppxPackage -DisableDevelopmentMode -Register (Join-Path $_.InstallLocation \"AppxManifest.xml\") -ErrorAction SilentlyContinue }'"
     ]
+  },
+
+  "WPFTweaksDeliveryOptimization": {
+    "Content": "Delivery Optimization - Disable",
+    "Description": "Stops Windows from using your bandwidth to upload updates to other PCs on the internet or local network.",
+    "category": "Essential Tweaks",
+    "panel": "1",
+    "Order": "a017_",
+    "registry": [
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization",
+        "Name": "DODownloadMode",
+        "Value": "0",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      }
+    ]
+  },
+  "WPFTweaksDisableStoreSearch": {
+    "Content": "Microsoft Store Recommended Search Results - Disable",
+    "Description": "Will not display recommended Microsoft Store apps when searching for apps in the Start menu.",
+    "category": "Essential Tweaks",
+    "panel": "1",
+    "Order": "a018_",
+    "InvokeScript": [
+      "icacls \"$Env:LocalAppData\\Packages\\Microsoft.WindowsStore_8wekyb3d8bbwe\\LocalState\\store.db\" /deny Everyone:F"
+    ],
+    "UndoScript": [
+      "icacls \"$Env:LocalAppData\\Packages\\Microsoft.WindowsStore_8wekyb3d8bbwe\\LocalState\\store.db\" /grant Everyone:F"
+    ]
+  },
+  "WPFTweaksPreventDeviceMetadataFromNetwork": {
+    "Content": "Prevent Device Companion Apps",
+    "Description": "Prevents additional software from being installed when plugging in devices (e.g. Ads when plugging in a monitor). Poses potential security risk.",
+    "category": "Essential Tweaks",
+    "panel": "1",
+    "Order": "a019_",
+    "registry": [
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Device Metadata",
+        "Name": "PreventDeviceMetadataFromNetwork",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      }
+    ]
+  },
+  "WPFTweaksRevertStartMenu": {
+    "Content": "Start Menu Previous Layout - Enable",
+    "Description": "Bring back the old Start Menu layout from before the gradual rollout of the new one in 25H2. On newer versions of Windows !!THIS TWEAK WILL NOT WORK!!",
+    "category": "Essential Tweaks",
+    "panel": "1",
+    "Order": "a020_",
+    "registry": [
+      {
+        "Path": "HKLM:\\SYSTEM\\ControlSet001\\Control\\FeatureManagement\\Overrides\\8\\3036241548",
+        "Name": "EnabledState",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      }
+    ]
+  },
+  "WPFTweaksWidget": {
+    "Content": "Widgets - Remove",
+    "Description": "Removes the annoying widgets in the bottom left of the Taskbar.",
+    "category": "Essential Tweaks",
+    "panel": "1",
+    "Order": "a021_",
+    "InvokeScript": [
+      "Get-Process *Widget* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.WidgetsPlatformRuntime\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxPackage -AllUsers -Name \"MicrosoftWindows.Client.WebExperience\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue'; Invoke-SrirachaToolExplorerUpdate -action \"restart\""
+    ],
+    "UndoScript": [
+      "winget install --id 9MSSGKG348SP --source msstore --accept-package-agreements --accept-source-agreements --silent; Invoke-SrirachaToolExplorerUpdate -action \"restart\""
+    ]
+  },
+  "WPFTweaksDisableBitLocker": {
+    "Content": "BitLocker - Disable",
+    "Description": "Decrypts the system drive and turns BitLocker off. This can take hours on a large drive and leaves the disk unencrypted. Undo re-enables BitLocker but does not configure a recovery key for you, so save one yourself before re-enabling.",
+    "category": "z__Advanced Tweaks - CAUTION",
+    "panel": "1",
+    "Order": "a041_",
+    "InvokeScript": [
+      "Disable-BitLocker -MountPoint $Env:SystemDrive"
+    ],
+    "UndoScript": [
+      "Enable-BitLocker -MountPoint $Env:SystemDrive"
+    ]
+  },
+  "WPFTweaksReservedStorage": {
+    "Content": "Disable Reserved Storage",
+    "Description": "Disables Windows Reserved Storage (7-10 GB held for updates/temp files). Recommended only on small drives. Re-enable before major Windows feature updates to avoid installation failures.",
+    "category": "z__Advanced Tweaks - CAUTION",
+    "panel": "1",
+    "Order": "a042_",
+    "InvokeScript": [
+      "DISM /Online /Set-ReservedStorageState /State:Disabled"
+    ],
+    "UndoScript": [
+      "DISM /Online /Set-ReservedStorageState /State:Enabled"
+    ]
+  },
+  "WPFTweaksBraveDebloat": {
+    "Content": "Brave Browser - Debloat",
+    "Description": "Disables various annoyances like Brave Rewards, Leo AI, Crypto Wallet and VPN.",
+    "category": "z__Advanced Tweaks - CAUTION",
+    "panel": "1",
+    "Order": "a043_",
+    "registry": [
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave",
+        "Name": "BraveRewardsDisabled",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      },
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave",
+        "Name": "BraveWalletDisabled",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      },
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave",
+        "Name": "BraveVPNDisabled",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      },
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave",
+        "Name": "BraveAIChatEnabled",
+        "Value": "0",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      },
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave",
+        "Name": "BraveStatsPingEnabled",
+        "Value": "0",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      },
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave",
+        "Name": "BraveNewsDisabled",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      },
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave",
+        "Name": "BraveTalkDisabled",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      },
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave",
+        "Name": "TorDisabled",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      },
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave",
+        "Name": "BraveP3AEnabled",
+        "Value": "0",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      },
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave",
+        "Name": "UrlKeyedAnonymizedDataCollectionEnabled",
+        "Value": "0",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      },
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave",
+        "Name": "SafeBrowsingExtendedReportingEnabled",
+        "Value": "0",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      },
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave",
+        "Name": "MetricsReportingEnabled",
+        "Value": "0",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      }
+    ]
+  },
+  "WPFTweaksDisableWarningForUnsignedRdp": {
+    "Content": "RDP Unsigned File Warnings - Disable",
+    "Description": "Disables warnings shown when launching unsigned RDP files introduced with the latest Windows 10 and 11 updates.",
+    "category": "z__Advanced Tweaks - CAUTION",
+    "panel": "1",
+    "Order": "a044_",
+    "registry": [
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\Terminal Services\\Client",
+        "Name": "RedirectionWarningDialogVersion",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      },
+      {
+        "Path": "HKCU:\\SOFTWARE\\Microsoft\\Terminal Server Client",
+        "Name": "RdpLaunchConsentAccepted",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      }
+    ]
+  },
+  "WPFToggleLongPaths": {
+    "Content": "Enable Long Paths",
+    "Description": "Toggles support for file paths longer than 260 characters in Explorer.",
+    "category": "Customize Preferences",
+    "panel": "2",
+    "Order": "a208_",
+    "registry": [
+      {
+        "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem",
+        "Name": "LongPathsEnabled",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "0",
+        "DefaultState": "false"
+      }
+    ]
+  },
+  "WPFToggleGameMode": {
+    "Content": "Game Mode",
+    "Description": "Toggles Windows prioritizes gaming performance by allocating system resources to games.",
+    "category": "Customize Preferences",
+    "panel": "2",
+    "Order": "a209_",
+    "registry": [
+      {
+        "Path": "HKCU:\\Software\\Microsoft\\GameBar",
+        "Name": "AllowAutoGameMode",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "0",
+        "DefaultState": "true"
+      },
+      {
+        "Path": "HKCU:\\Software\\Microsoft\\GameBar",
+        "Name": "AutoGameModeEnabled",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "0",
+        "DefaultState": "true"
+      }
+    ]
+  },
+  "WPFTweaksDisableLockscreen": {
+    "Content": "Lock Screen - Disable",
+    "Description": "Skips the lock screen entirely and goes directly to the sign-in screen on boot and wake.",
+    "category": "Customize Preferences",
+    "panel": "2",
+    "Order": "a210_",
+    "registry": [
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Personalization",
+        "Name": "NoLockScreen",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>"
+      }
+    ]
+  },
+  "WPFToggleLoginBlur": {
+    "Content": "Logon Screen Acrylic Blur",
+    "Description": "Toggles the acrylic blur effect on login screen background.",
+    "category": "Customize Preferences",
+    "panel": "2",
+    "Order": "a211_",
+    "registry": [
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+        "Name": "DisableAcrylicBackgroundOnLogon",
+        "Value": "0",
+        "Type": "DWord",
+        "OriginalValue": "1",
+        "DefaultState": "true"
+      }
+    ]
+  },
+  "WPFToggleStandbyFix": {
+    "Content": "S0 Sleep Network Connectivity",
+    "Description": "Toggles network connectivity during S0 Sleep which is low power idle in modern laptops.",
+    "category": "Customize Preferences",
+    "panel": "2",
+    "Order": "a212_",
+    "registry": [
+      {
+        "Path": "HKCU:\\SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\f15576e8-98b7-4186-b944-eafa664402d9",
+        "Name": "ACSettingIndex",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "0",
+        "DefaultState": "true"
+      }
+    ]
+  },
+  "WPFToggleScrollbars": {
+    "Content": "Scrollbars Always Visible",
+    "Description": "If enabled, scrollbars will always be visible. If disabled, Windows will automatically hide scrollbars when not in use.",
+    "category": "Customize Preferences",
+    "panel": "2",
+    "Order": "a213_",
+    "registry": [
+      {
+        "Path": "HKCU:\\Control Panel\\Accessibility",
+        "Name": "DynamicScrollbars",
+        "Value": "0",
+        "Type": "DWord",
+        "OriginalValue": "1",
+        "DefaultState": "false",
+        "link": "https://winutil.christitus.com/dev/tweaks/customize-preferences/scrollbars"
+      }
+    ]
+  },
+  "WPFToggleBatteryPercentage": {
+    "Content": "System Tray Battery Percentage",
+    "Description": "Shows numeric battery percentage next to the battery icon in the system tray.",
+    "category": "Customize Preferences",
+    "panel": "2",
+    "Order": "a214_",
+    "registry": [
+      {
+        "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+        "Name": "IsBatteryPercentageEnabled",
+        "Value": "1",
+        "Type": "DWord",
+        "OriginalValue": "<RemoveEntry>",
+        "DefaultState": "false"
+      }
+    ]
   }
 }
 '@ | ConvertFrom-Json
