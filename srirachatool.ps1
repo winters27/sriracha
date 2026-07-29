@@ -3387,6 +3387,7 @@ function Invoke-WPFButton {
         "WPFPanelPrograms" { Invoke-WPFControlPanel -Panel $button }
         "WPFPanelSecurity" { Invoke-WPFControlPanel -Panel $button }
         "WPFFixesNTPPool" { Invoke-WPFFixesNTPPool }
+        "WPFInstallFOSSInfo" { Invoke-WPFToggleFossFilter }
         "WPFExpandAllCategories" { Invoke-WPFToggleAllCategories -Expand $true }
         "WPFCollapseAllCategories" { Invoke-WPFToggleAllCategories -Expand $false }
         "WPFUpdatesdefault" { Invoke-WPFFixesUpdate }
@@ -3418,6 +3419,28 @@ function Invoke-WPFCloseButton {
     $sync["Form"].Close()
     Write-Host "Bye bye!"
 }
+function Invoke-WPFToggleFossFilter {
+    <#
+
+    .SYNOPSIS
+        Limits the Apps tab to open source entries, or clears that limit
+
+    .DESCRIPTION
+        Runs through the same search index the filter box uses, so the two stay
+        consistent and neither re-walks the form objects.
+
+    #>
+    $sync.FossOnly = -not $sync.FossOnly
+
+    $button = $sync["WPFInstallFOSSInfo"]
+    if ($button) {
+        $button.Content = if ($sync.FossOnly) { "Showing: Open Source Only" } else { "Showing: All Applications" }
+    }
+
+    # Re-run the current search so the two filters compose instead of overwriting
+    Find-AppsByNameOrDescription -SearchString $sync.SearchBar.Text
+}
+
 function Invoke-WPFToggleAllCategories {
     <#
 
@@ -4573,6 +4596,7 @@ function Get-AppsSearchIndex {
         $index.Add([pscustomobject]@{
             Element     = $element
             Category    = $config.Category
+            Foss        = [bool]$config.foss
             Content     = if ($config.Content) { $config.Content.ToLower() } else { "" }
             Description = if ($config.Description) { $config.Description.ToLower() } else { "" }
         })
@@ -4616,7 +4640,9 @@ function Find-AppsByNameOrDescription {
 
     $index = Get-AppsSearchIndex
 
-    if ([string]::IsNullOrWhiteSpace($SearchString)) {
+    # An empty box with no open-source filter means everything is visible, which is
+    # the one case that can skip per-entry matching entirely.
+    if ([string]::IsNullOrWhiteSpace($SearchString) -and -not $sync.FossOnly) {
         foreach ($entry in $index) { Set-ElementVisibility -Element $entry.Element -State "Visible" }
 
         foreach ($category in $sync.AppsCategories) {
@@ -4635,7 +4661,13 @@ function Find-AppsByNameOrDescription {
     $matchCounts = @{}
 
     foreach ($entry in $index) {
-        if ($entry.Content.Contains($textToSearch) -or $entry.Description.Contains($textToSearch)) {
+        if ($sync.FossOnly -and -not $entry.Foss) {
+            Set-ElementVisibility -Element $entry.Element -State "Collapsed"
+            continue
+        }
+
+        if ([string]::IsNullOrWhiteSpace($textToSearch) -or
+            $entry.Content.Contains($textToSearch) -or $entry.Description.Contains($textToSearch)) {
             Set-ElementVisibility -Element $entry.Element -State "Visible"
             if ($entry.Category) { $matchCounts[$entry.Category] = [int]$matchCounts[$entry.Category] + 1 }
         }
@@ -6038,6 +6070,7 @@ function Invoke-WPFUpdatessecurity {
 $sync.configs.applications = @'
 {
   "WPFInstall1password": {
+    "foss": false,
     "category": "Utilities",
     "choco": "1password",
     "content": "1Password",
@@ -6046,6 +6079,7 @@ $sync.configs.applications = @'
     "winget": "AgileBits.1Password"
   },
   "WPFInstall7zip": {
+    "foss": true,
     "category": "Utilities",
     "choco": "7zip",
     "content": "7-Zip",
@@ -6054,6 +6088,7 @@ $sync.configs.applications = @'
     "winget": "7zip.7zip"
   },
   "WPFInstalladobe": {
+    "foss": false,
     "category": "Document",
     "choco": "adobereader",
     "content": "Adobe Acrobat Reader",
@@ -6062,6 +6097,7 @@ $sync.configs.applications = @'
     "winget": "Adobe.Acrobat.Reader.64-bit"
   },
   "WPFInstalladvancedip": {
+    "foss": false,
     "category": "Pro Tools",
     "choco": "advanced-ip-scanner",
     "content": "Advanced IP Scanner",
@@ -6070,6 +6106,7 @@ $sync.configs.applications = @'
     "winget": "Famatech.AdvancedIPScanner"
   },
   "WPFInstallaffine": {
+    "foss": true,
     "category": "Document",
     "choco": "na",
     "content": "AFFiNE",
@@ -6078,6 +6115,7 @@ $sync.configs.applications = @'
     "winget": "ToEverything.AFFiNE"
   },
   "WPFInstallaimp": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "aimp",
     "content": "AIMP (Music Player)",
@@ -6086,6 +6124,7 @@ $sync.configs.applications = @'
     "winget": "AIMP.AIMP"
   },
   "WPFInstallalacritty": {
+    "foss": true,
     "category": "Utilities",
     "choco": "alacritty",
     "content": "Alacritty Terminal",
@@ -6094,6 +6133,7 @@ $sync.configs.applications = @'
     "winget": "Alacritty.Alacritty"
   },
   "WPFInstallanaconda3": {
+    "foss": false,
     "category": "Development",
     "choco": "anaconda3",
     "content": "Anaconda",
@@ -6102,6 +6142,7 @@ $sync.configs.applications = @'
     "winget": "Anaconda.Anaconda3"
   },
   "WPFInstallangryipscanner": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "angryip",
     "content": "Angry IP Scanner",
@@ -6110,6 +6151,7 @@ $sync.configs.applications = @'
     "winget": "angryziber.AngryIPScanner"
   },
   "WPFInstallanki": {
+    "foss": true,
     "category": "Document",
     "choco": "anki",
     "content": "Anki",
@@ -6118,6 +6160,7 @@ $sync.configs.applications = @'
     "winget": "Anki.Anki"
   },
   "WPFInstallanydesk": {
+    "foss": false,
     "category": "Utilities",
     "choco": "anydesk",
     "content": "AnyDesk",
@@ -6126,6 +6169,7 @@ $sync.configs.applications = @'
     "winget": "AnyDesk.AnyDesk"
   },
   "WPFInstallaudacity": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "audacity",
     "content": "Audacity",
@@ -6134,6 +6178,7 @@ $sync.configs.applications = @'
     "winget": "Audacity.Audacity"
   },
   "WPFInstallautoruns": {
+    "foss": false,
     "category": "Microsoft Tools",
     "choco": "autoruns",
     "content": "Autoruns",
@@ -6142,6 +6187,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.Sysinternals.Autoruns"
   },
   "WPFInstallrdcman": {
+    "foss": false,
     "category": "Microsoft Tools",
     "choco": "rdcman",
     "content": "RDCMan",
@@ -6150,6 +6196,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.Sysinternals.RDCMan"
   },
   "WPFInstallautohotkey": {
+    "foss": true,
     "category": "Utilities",
     "choco": "autohotkey",
     "content": "AutoHotkey",
@@ -6158,6 +6205,7 @@ $sync.configs.applications = @'
     "winget": "AutoHotkey.AutoHotkey"
   },
   "WPFInstallazuredatastudio": {
+    "foss": true,
     "category": "Microsoft Tools",
     "choco": "azure-data-studio",
     "content": "Microsoft Azure Data Studio",
@@ -6166,6 +6214,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.AzureDataStudio"
   },
   "WPFInstallbarrier": {
+    "foss": true,
     "category": "Utilities",
     "choco": "barrier",
     "content": "Barrier",
@@ -6174,6 +6223,7 @@ $sync.configs.applications = @'
     "winget": "DebaucheeOpenSourceGroup.Barrier"
   },
   "WPFInstallbat": {
+    "foss": true,
     "category": "Utilities",
     "choco": "bat",
     "content": "Bat (Cat)",
@@ -6182,6 +6232,7 @@ $sync.configs.applications = @'
     "winget": "sharkdp.bat"
   },
   "WPFInstallbeeper": {
+    "foss": false,
     "category": "Communications",
     "choco": "na",
     "content": "Beeper",
@@ -6190,6 +6241,7 @@ $sync.configs.applications = @'
     "winget": "Beeper.Beeper"
   },
   "WPFInstallbitwarden": {
+    "foss": true,
     "category": "Utilities",
     "choco": "bitwarden",
     "content": "Bitwarden",
@@ -6198,6 +6250,7 @@ $sync.configs.applications = @'
     "winget": "Bitwarden.Bitwarden"
   },
   "WPFInstallbleachbit": {
+    "foss": true,
     "category": "Utilities",
     "choco": "bleachbit",
     "content": "BleachBit",
@@ -6206,6 +6259,7 @@ $sync.configs.applications = @'
     "winget": "BleachBit.BleachBit"
   },
   "WPFInstallblender": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "blender",
     "content": "Blender (3D Graphics)",
@@ -6214,6 +6268,7 @@ $sync.configs.applications = @'
     "winget": "BlenderFoundation.Blender"
   },
   "WPFInstallblip": {
+    "foss": false,
     "category": "Utilities",
     "choco": "na",
     "content": "Blip",
@@ -6222,6 +6277,7 @@ $sync.configs.applications = @'
     "winget": "msstore:9N7JSXC1SJK6"
   },
   "WPFInstallbrave": {
+    "foss": true,
     "category": "Browsers",
     "choco": "brave",
     "content": "Brave",
@@ -6230,6 +6286,7 @@ $sync.configs.applications = @'
     "winget": "Brave.Brave"
   },
   "WPFInstallbulkcrapuninstaller": {
+    "foss": true,
     "category": "Utilities",
     "choco": "bulk-crap-uninstaller",
     "content": "Bulk Crap Uninstaller",
@@ -6238,6 +6295,7 @@ $sync.configs.applications = @'
     "winget": "Klocman.BulkCrapUninstaller"
   },
   "WPFInstallbulkrenameutility": {
+    "foss": false,
     "category": "Utilities",
     "choco": "bulkrenameutility",
     "content": "Bulk Rename Utility",
@@ -6246,6 +6304,7 @@ $sync.configs.applications = @'
     "winget": "TGRMNSoftware.BulkRenameUtility"
   },
   "WPFInstallAdvancedRenamer": {
+    "foss": false,
     "category": "Utilities",
     "choco": "advanced-renamer",
     "content": "Advanced Renamer",
@@ -6254,6 +6313,7 @@ $sync.configs.applications = @'
     "winget": "HulubuluSoftware.AdvancedRenamer"
   },
   "WPFInstallcalibre": {
+    "foss": true,
     "category": "Document",
     "choco": "calibre",
     "content": "Calibre",
@@ -6262,6 +6322,7 @@ $sync.configs.applications = @'
     "winget": "calibre.calibre"
   },
   "WPFInstallcarnac": {
+    "foss": true,
     "category": "Utilities",
     "choco": "carnac",
     "content": "Carnac",
@@ -6270,6 +6331,7 @@ $sync.configs.applications = @'
     "winget": "code52.Carnac"
   },
   "WPFInstallcemu": {
+    "foss": true,
     "category": "Games",
     "choco": "cemu",
     "content": "Cemu",
@@ -6279,6 +6341,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallchatgpt": {
+    "foss": false,
     "category": "Development",
     "choco": "na",
     "content": "ChatGPT Desktop",
@@ -6287,6 +6350,7 @@ $sync.configs.applications = @'
     "winget": "msstore:9NT1R1C2HH7J"
   },
   "WPFInstallchatterino": {
+    "foss": true,
     "category": "Communications",
     "choco": "chatterino",
     "content": "Chatterino",
@@ -6295,6 +6359,7 @@ $sync.configs.applications = @'
     "winget": "ChatterinoTeam.Chatterino"
   },
   "WPFInstallchrome": {
+    "foss": false,
     "category": "Browsers",
     "choco": "googlechrome",
     "content": "Chrome",
@@ -6303,6 +6368,7 @@ $sync.configs.applications = @'
     "winget": "Google.Chrome"
   },
   "WPFInstallchromium": {
+    "foss": true,
     "category": "Browsers",
     "choco": "chromium",
     "content": "Chromium",
@@ -6311,6 +6377,7 @@ $sync.configs.applications = @'
     "winget": "Hibbiki.Chromium"
   },
   "WPFInstallarc": {
+    "foss": false,
     "category": "Browsers",
     "choco": "na",
     "content": "Arc",
@@ -6320,6 +6387,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallcinebenchr23": {
+    "foss": false,
     "category": "Pro Tools",
     "choco": "na",
     "content": "Cinebench R23",
@@ -6329,6 +6397,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallclaude": {
+    "foss": false,
     "category": "Development",
     "choco": "claude",
     "content": "Claude Desktop",
@@ -6338,6 +6407,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallclaudecode": {
+    "foss": false,
     "category": "Development",
     "choco": "claude-code",
     "content": "Claude Code",
@@ -6346,6 +6416,7 @@ $sync.configs.applications = @'
     "winget": "Anthropic.ClaudeCode"
   },
   "WPFInstallclementine": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "clementine",
     "content": "Clementine",
@@ -6354,6 +6425,7 @@ $sync.configs.applications = @'
     "winget": "Clementine.Clementine"
   },
   "WPFInstallclink": {
+    "foss": true,
     "category": "Development",
     "choco": "clink",
     "content": "Clink",
@@ -6362,6 +6434,7 @@ $sync.configs.applications = @'
     "winget": "chrisant996.Clink"
   },
   "WPFInstallclonehero": {
+    "foss": false,
     "category": "Games",
     "choco": "na",
     "content": "Clone Hero",
@@ -6370,6 +6443,7 @@ $sync.configs.applications = @'
     "winget": "CloneHeroTeam.CloneHero"
   },
   "WPFInstallcmake": {
+    "foss": true,
     "category": "Development",
     "choco": "cmake",
     "content": "CMake",
@@ -6378,6 +6452,7 @@ $sync.configs.applications = @'
     "winget": "Kitware.CMake"
   },
   "WPFInstallcopyq": {
+    "foss": true,
     "category": "Utilities",
     "choco": "copyq",
     "content": "CopyQ (Clipboard Manager)",
@@ -6386,6 +6461,7 @@ $sync.configs.applications = @'
     "winget": "hluk.CopyQ"
   },
   "WPFInstallcpuz": {
+    "foss": false,
     "category": "Utilities",
     "choco": "cpu-z",
     "content": "CPU-Z",
@@ -6394,6 +6470,7 @@ $sync.configs.applications = @'
     "winget": "CPUID.CPU-Z"
   },
   "WPFInstallcrystaldiskinfo": {
+    "foss": true,
     "category": "Utilities",
     "choco": "crystaldiskinfo",
     "content": "Crystal Disk Info",
@@ -6402,6 +6479,7 @@ $sync.configs.applications = @'
     "winget": "CrystalDewWorld.CrystalDiskInfo"
   },
   "WPFInstallcapframex": {
+    "foss": true,
     "category": "Utilities",
     "choco": "na",
     "content": "CapFrameX",
@@ -6410,6 +6488,7 @@ $sync.configs.applications = @'
     "winget": "CXWorld.CapFrameX"
   },
   "WPFInstallcrystaldiskmark": {
+    "foss": true,
     "category": "Utilities",
     "choco": "crystaldiskmark",
     "content": "Crystal Disk Mark",
@@ -6419,6 +6498,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallcursor": {
+    "foss": false,
     "category": "Development",
     "choco": "cursoride",
     "content": "Cursor",
@@ -6427,6 +6507,7 @@ $sync.configs.applications = @'
     "winget": "Anysphere.Cursor"
   },
   "WPFInstalldarktable": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "darktable",
     "content": "darktable",
@@ -6435,6 +6516,7 @@ $sync.configs.applications = @'
     "winget": "darktable.darktable"
   },
   "WPFInstallDaxStudio": {
+    "foss": true,
     "category": "Development",
     "choco": "daxstudio",
     "content": "DaxStudio",
@@ -6443,6 +6525,7 @@ $sync.configs.applications = @'
     "winget": "DaxStudio.DaxStudio"
   },
   "WPFInstallddu": {
+    "foss": true,
     "category": "Utilities",
     "choco": "ddu",
     "content": "Display Driver Uninstaller",
@@ -6451,6 +6534,7 @@ $sync.configs.applications = @'
     "winget": "Wagnardsoft.DisplayDriverUninstaller"
   },
   "WPFInstalldeluge": {
+    "foss": true,
     "category": "Utilities",
     "choco": "deluge",
     "content": "Deluge",
@@ -6460,6 +6544,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstalldeskflow": {
+    "foss": true,
     "category": "Utilities",
     "choco": "deskflow",
     "content": "Deskflow",
@@ -6468,6 +6553,7 @@ $sync.configs.applications = @'
     "winget": "Deskflow.Deskflow"
   },
   "WPFInstalldevtoys": {
+    "foss": true,
     "category": "Utilities",
     "choco": "devtoys",
     "content": "DevToys",
@@ -6476,6 +6562,7 @@ $sync.configs.applications = @'
     "winget": "DevToys-app.DevToys"
   },
   "WPFInstalldigikam": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "digikam",
     "content": "digiKam",
@@ -6484,6 +6571,7 @@ $sync.configs.applications = @'
     "winget": "KDE.digikam"
   },
   "WPFInstalldiscord": {
+    "foss": false,
     "category": "Communications",
     "choco": "discord",
     "content": "Discord",
@@ -6492,6 +6580,7 @@ $sync.configs.applications = @'
     "winget": "Discord.Discord"
   },
   "WPFInstalldismtools": {
+    "foss": true,
     "category": "Microsoft Tools",
     "choco": "na",
     "content": "DISMTools",
@@ -6500,6 +6589,7 @@ $sync.configs.applications = @'
     "winget": "CodingWondersSoftware.DISMTools.Stable"
   },
   "WPFInstallntlite": {
+    "foss": false,
     "category": "Microsoft Tools",
     "choco": "ntlite-free",
     "content": "NTLite",
@@ -6508,6 +6598,7 @@ $sync.configs.applications = @'
     "winget": "Nlitesoft.NTLite"
   },
   "WPFInstallditto": {
+    "foss": true,
     "category": "Utilities",
     "choco": "ditto",
     "content": "Ditto",
@@ -6516,6 +6607,7 @@ $sync.configs.applications = @'
     "winget": "Ditto.Ditto"
   },
   "WPFInstalldockerdesktop": {
+    "foss": false,
     "category": "Development",
     "choco": "docker-desktop",
     "content": "Docker Desktop",
@@ -6525,6 +6617,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstalldorion": {
+    "foss": true,
     "category": "Communications",
     "choco": "dorion",
     "content": "Dorion",
@@ -6534,6 +6627,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstalldotnet10": {
+    "foss": true,
     "category": "Microsoft Tools",
     "choco": "dotnet-10.0-runtime",
     "content": ".NET Desktop Runtime 10",
@@ -6542,6 +6636,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.DotNet.DesktopRuntime.10"
   },
   "WPFInstalldotnet3": {
+    "foss": true,
     "category": "Microsoft Tools",
     "choco": "dotnetcore3-desktop-runtime",
     "content": ".NET Desktop Runtime 3.1",
@@ -6550,6 +6645,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.DotNet.DesktopRuntime.3_1"
   },
   "WPFInstalldotnet5": {
+    "foss": true,
     "category": "Microsoft Tools",
     "choco": "dotnet-5.0-runtime",
     "content": ".NET Desktop Runtime 5",
@@ -6558,6 +6654,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.DotNet.DesktopRuntime.5"
   },
   "WPFInstalldotnet6": {
+    "foss": true,
     "category": "Microsoft Tools",
     "choco": "dotnet-6.0-runtime",
     "content": ".NET Desktop Runtime 6",
@@ -6566,6 +6663,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.DotNet.DesktopRuntime.6"
   },
   "WPFInstalldotnet7": {
+    "foss": true,
     "category": "Microsoft Tools",
     "choco": "dotnet-7.0-runtime",
     "content": ".NET Desktop Runtime 7",
@@ -6574,6 +6672,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.DotNet.DesktopRuntime.7"
   },
   "WPFInstalldotnet8": {
+    "foss": true,
     "category": "Microsoft Tools",
     "choco": "dotnet-8.0-runtime",
     "content": ".NET Desktop Runtime 8",
@@ -6582,6 +6681,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.DotNet.DesktopRuntime.8"
   },
   "WPFInstalldotnet9": {
+    "foss": true,
     "category": "Microsoft Tools",
     "choco": "dotnet-9.0-runtime",
     "content": ".NET Desktop Runtime 9",
@@ -6590,6 +6690,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.DotNet.DesktopRuntime.9"
   },
   "WPFInstalldmt": {
+    "foss": true,
     "winget": "GNE.DualMonitorTools",
     "choco": "dual-monitor-tools",
     "category": "Utilities",
@@ -6598,6 +6699,7 @@ $sync.configs.applications = @'
     "description": "Dual Monitor Tools (DMT) is a FOSS app that allows you to customize the handling of multiple monitors. Useful for fullscreen games and apps that handle a second monitor poorly and can improve your workflow."
   },
   "WPFInstallduplicati": {
+    "foss": true,
     "category": "Utilities",
     "choco": "duplicati",
     "content": "Duplicati",
@@ -6606,6 +6708,7 @@ $sync.configs.applications = @'
     "winget": "Duplicati.Duplicati"
   },
   "WPFInstalleaapp": {
+    "foss": false,
     "category": "Games",
     "choco": "ea-app",
     "content": "EA App",
@@ -6614,6 +6717,7 @@ $sync.configs.applications = @'
     "winget": "ElectronicArts.EADesktop"
   },
   "WPFInstalleartrumpet": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "eartrumpet",
     "content": "EarTrumpet (Audio)",
@@ -6622,6 +6726,7 @@ $sync.configs.applications = @'
     "winget": "File-New-Project.EarTrumpet"
   },
   "WPFInstalledge": {
+    "foss": false,
     "category": "Browsers",
     "choco": "microsoft-edge",
     "content": "Edge",
@@ -6630,6 +6735,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.Edge"
   },
   "WPFInstallefibooteditor": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "na",
     "content": "EFI Boot Editor",
@@ -6638,6 +6744,7 @@ $sync.configs.applications = @'
     "winget": "EFIBootEditor.EFIBootEditor"
   },
   "WPFInstallemulationstation": {
+    "foss": true,
     "category": "Games",
     "choco": "emulationstation",
     "content": "Emulation Station",
@@ -6646,6 +6753,7 @@ $sync.configs.applications = @'
     "winget": "Emulationstation.Emulationstation"
   },
   "WPFInstallenteauth": {
+    "foss": true,
     "category": "Utilities",
     "choco": "ente-auth",
     "content": "Ente Auth",
@@ -6654,6 +6762,7 @@ $sync.configs.applications = @'
     "winget": "ente-io.auth-desktop"
   },
   "WPFInstallepicgames": {
+    "foss": false,
     "category": "Games",
     "choco": "epicgameslauncher",
     "content": "Epic Games Launcher",
@@ -6662,6 +6771,7 @@ $sync.configs.applications = @'
     "winget": "EpicGames.EpicGamesLauncher"
   },
   "WPFInstallesearch": {
+    "foss": false,
     "category": "Utilities",
     "choco": "everything",
     "content": "Everything Search",
@@ -6670,6 +6780,7 @@ $sync.configs.applications = @'
     "winget": "voidtools.Everything"
   },
   "WPFInstallespanso": {
+    "foss": true,
     "category": "Utilities",
     "choco": "espanso",
     "content": "Espanso",
@@ -6678,6 +6789,7 @@ $sync.configs.applications = @'
     "winget": "Espanso.Espanso"
   },
   "WPFInstalletcher": {
+    "foss": true,
     "category": "Utilities",
     "choco": "etcher",
     "content": "Etcher USB Creator",
@@ -6686,6 +6798,7 @@ $sync.configs.applications = @'
     "winget": "Balena.Etcher"
   },
   "WPFInstallfalkon": {
+    "foss": true,
     "category": "Browsers",
     "choco": "falkon",
     "content": "Falkon",
@@ -6694,6 +6807,7 @@ $sync.configs.applications = @'
     "winget": "KDE.Falkon"
   },
   "WPFInstallfastfetch": {
+    "foss": true,
     "category": "Utilities",
     "choco": "na",
     "content": "Fastfetch",
@@ -6702,6 +6816,7 @@ $sync.configs.applications = @'
     "winget": "Fastfetch-cli.Fastfetch"
   },
   "WPFInstallferdium": {
+    "foss": true,
     "category": "Communications",
     "choco": "ferdium",
     "content": "Ferdium",
@@ -6710,6 +6825,7 @@ $sync.configs.applications = @'
     "winget": "Ferdium.Ferdium"
   },
   "WPFInstallffmpeg": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "ffmpeg-full",
     "content": "FFmpeg (full)",
@@ -6718,6 +6834,7 @@ $sync.configs.applications = @'
     "winget": "Gyan.FFmpeg"
   },
   "WPFInstallfileconverter": {
+    "foss": true,
     "category": "Utilities",
     "choco": "file-converter",
     "content": "File-Converter",
@@ -6726,6 +6843,7 @@ $sync.configs.applications = @'
     "winget": "AdrienAllard.FileConverter"
   },
   "WPFInstallfiles": {
+    "foss": true,
     "category": "Utilities",
     "choco": "files",
     "content": "Files",
@@ -6734,6 +6852,7 @@ $sync.configs.applications = @'
     "winget": "na"
   },
   "WPFInstallfirealpaca": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "firealpaca",
     "content": "Fire Alpaca",
@@ -6742,6 +6861,7 @@ $sync.configs.applications = @'
     "winget": "FireAlpaca.FireAlpaca"
   },
   "WPFInstallfirefox": {
+    "foss": true,
     "category": "Browsers",
     "choco": "firefox",
     "content": "Firefox",
@@ -6750,6 +6870,7 @@ $sync.configs.applications = @'
     "winget": "Mozilla.Firefox"
   },
   "WPFInstallfirefoxesr": {
+    "foss": true,
     "category": "Browsers",
     "choco": "FirefoxESR",
     "content": "Firefox ESR",
@@ -6758,6 +6879,7 @@ $sync.configs.applications = @'
     "winget": "Mozilla.Firefox.ESR"
   },
   "WPFInstallflameshot": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "flameshot",
     "content": "Flameshot (Screenshots)",
@@ -6766,6 +6888,7 @@ $sync.configs.applications = @'
     "winget": "Flameshot.Flameshot"
   },
   "WPFInstalllightshot": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "lightshot",
     "content": "Lightshot (Screenshots)",
@@ -6774,6 +6897,7 @@ $sync.configs.applications = @'
     "winget": "Skillbrains.Lightshot"
   },
   "WPFInstallfloorp": {
+    "foss": true,
     "category": "Browsers",
     "choco": "na",
     "content": "Floorp",
@@ -6782,6 +6906,7 @@ $sync.configs.applications = @'
     "winget": "Ablaze.Floorp"
   },
   "WPFInstallflow": {
+    "foss": true,
     "category": "Utilities",
     "choco": "flow-launcher",
     "content": "Flow launcher",
@@ -6790,6 +6915,7 @@ $sync.configs.applications = @'
     "winget": "Flow-Launcher.Flow-Launcher"
   },
   "WPFInstallflux": {
+    "foss": false,
     "category": "Utilities",
     "choco": "flux",
     "content": "F.lux",
@@ -6798,6 +6924,7 @@ $sync.configs.applications = @'
     "winget": "flux.flux"
   },
   "WPFInstallfoobar": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "foobar2000",
     "content": "foobar2000 (Music Player)",
@@ -6806,6 +6933,7 @@ $sync.configs.applications = @'
     "winget": "PeterPawlowski.foobar2000"
   },
   "WPFInstallfoxpdfeditor": {
+    "foss": false,
     "category": "Document",
     "choco": "na",
     "content": "Foxit PDF Editor",
@@ -6814,6 +6942,7 @@ $sync.configs.applications = @'
     "winget": "Foxit.PhantomPDF"
   },
   "WPFInstallfoxpdfreader": {
+    "foss": false,
     "category": "Document",
     "choco": "foxitreader",
     "content": "Foxit PDF Reader",
@@ -6822,6 +6951,7 @@ $sync.configs.applications = @'
     "winget": "Foxit.FoxitReader"
   },
   "WPFInstallfreecad": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "freecad",
     "content": "FreeCAD",
@@ -6830,6 +6960,7 @@ $sync.configs.applications = @'
     "winget": "FreeCAD.FreeCAD"
   },
   "WPFInstallfxsound": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "fxsound",
     "content": "FxSound",
@@ -6838,6 +6969,7 @@ $sync.configs.applications = @'
     "winget": "FxSound.FxSound"
   },
   "WPFInstallfzf": {
+    "foss": true,
     "category": "Utilities",
     "choco": "fzf",
     "content": "Fzf",
@@ -6846,6 +6978,7 @@ $sync.configs.applications = @'
     "winget": "junegunn.fzf"
   },
   "WPFInstallgeforcenow": {
+    "foss": false,
     "category": "Games",
     "choco": "nvidia-geforce-now",
     "content": "GeForce NOW",
@@ -6854,6 +6987,7 @@ $sync.configs.applications = @'
     "winget": "Nvidia.GeForceNow"
   },
   "WPFInstallgimp": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "gimp",
     "content": "GIMP (Image Editor)",
@@ -6862,6 +6996,7 @@ $sync.configs.applications = @'
     "winget": "GIMP.GIMP.3"
   },
   "WPFInstallgit": {
+    "foss": true,
     "category": "Development",
     "choco": "git",
     "content": "Git",
@@ -6870,6 +7005,7 @@ $sync.configs.applications = @'
     "winget": "Git.Git"
   },
   "WPFInstallgitbutler": {
+    "foss": false,
     "category": "Development",
     "choco": "na",
     "content": "Git Butler",
@@ -6878,6 +7014,7 @@ $sync.configs.applications = @'
     "winget": "GitButler.GitButler"
   },
   "WPFInstallgitextensions": {
+    "foss": true,
     "category": "Development",
     "choco": "git;gitextensions",
     "content": "Git Extensions",
@@ -6886,6 +7023,7 @@ $sync.configs.applications = @'
     "winget": "GitExtensionsTeam.GitExtensions"
   },
   "WPFInstallgithubcli": {
+    "foss": true,
     "category": "Development",
     "choco": "git;gh",
     "content": "GitHub CLI",
@@ -6894,6 +7032,7 @@ $sync.configs.applications = @'
     "winget": "GitHub.cli"
   },
   "WPFInstallgithubdesktop": {
+    "foss": true,
     "category": "Development",
     "choco": "git;github-desktop",
     "content": "GitHub Desktop",
@@ -6902,6 +7041,7 @@ $sync.configs.applications = @'
     "winget": "GitHub.GitHubDesktop"
   },
   "WPFInstallgitkrakenclient": {
+    "foss": false,
     "category": "Development",
     "choco": "gitkraken",
     "content": "GitKraken Client",
@@ -6910,6 +7050,7 @@ $sync.configs.applications = @'
     "winget": "Axosoft.GitKraken"
   },
   "WPFInstallglaryutilities": {
+    "foss": false,
     "category": "Utilities",
     "choco": "glaryutilities-free",
     "content": "Glary Utilities",
@@ -6918,6 +7059,7 @@ $sync.configs.applications = @'
     "winget": "Glarysoft.GlaryUtilities"
   },
   "WPFInstallgodotengine": {
+    "foss": true,
     "category": "Development",
     "choco": "godot",
     "content": "Godot Engine",
@@ -6926,6 +7068,7 @@ $sync.configs.applications = @'
     "winget": "GodotEngine.GodotEngine"
   },
   "WPFInstallgog": {
+    "foss": false,
     "category": "Games",
     "choco": "goggalaxy",
     "content": "GOG Galaxy",
@@ -6934,6 +7077,7 @@ $sync.configs.applications = @'
     "winget": "GOG.Galaxy"
   },
   "WPFInstallgitify": {
+    "foss": true,
     "category": "Development",
     "choco": "na",
     "content": "Gitify",
@@ -6942,6 +7086,7 @@ $sync.configs.applications = @'
     "winget": "Gitify.Gitify"
   },
   "WPFInstallgolang": {
+    "foss": true,
     "category": "Development",
     "choco": "golang",
     "content": "Go",
@@ -6950,6 +7095,7 @@ $sync.configs.applications = @'
     "winget": "GoLang.Go"
   },
   "WPFInstallgoogledrive": {
+    "foss": false,
     "category": "Utilities",
     "choco": "googledrive",
     "content": "Google Drive",
@@ -6958,6 +7104,7 @@ $sync.configs.applications = @'
     "winget": "Google.GoogleDrive"
   },
   "WPFInstallgpuz": {
+    "foss": false,
     "category": "Utilities",
     "choco": "gpu-z",
     "content": "GPU-Z",
@@ -6966,6 +7113,7 @@ $sync.configs.applications = @'
     "winget": "TechPowerUp.GPU-Z"
   },
   "WPFInstallgreenshot": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "greenshot",
     "content": "Greenshot (Screenshots)",
@@ -6974,6 +7122,7 @@ $sync.configs.applications = @'
     "winget": "Greenshot.Greenshot"
   },
   "WPFInstallgsudo": {
+    "foss": true,
     "category": "Utilities",
     "choco": "gsudo",
     "content": "Gsudo",
@@ -6982,6 +7131,7 @@ $sync.configs.applications = @'
     "winget": "gerardog.gsudo"
   },
   "WPFInstallguilded": {
+    "foss": false,
     "category": "Communications",
     "choco": "na",
     "content": "Guilded",
@@ -6990,6 +7140,7 @@ $sync.configs.applications = @'
     "winget": "Guilded.Guilded"
   },
   "WPFInstallhandbrake": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "handbrake",
     "content": "HandBrake",
@@ -6998,6 +7149,7 @@ $sync.configs.applications = @'
     "winget": "HandBrake.HandBrake"
   },
   "WPFInstallharmonoid": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "na",
     "content": "Harmonoid",
@@ -7006,6 +7158,7 @@ $sync.configs.applications = @'
     "winget": "Harmonoid.Harmonoid"
   },
   "WPFInstallheidisql": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "heidisql",
     "content": "HeidiSQL",
@@ -7015,6 +7168,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallhelium": {
+    "foss": true,
     "category": "Browsers",
     "choco": "helium",
     "content": "Helium",
@@ -7023,6 +7177,7 @@ $sync.configs.applications = @'
     "winget": "ImputNet.Helium"
   },
   "WPFInstallhelix": {
+    "foss": true,
     "category": "Development",
     "choco": "helix",
     "content": "Helix",
@@ -7031,6 +7186,7 @@ $sync.configs.applications = @'
     "winget": "Helix.Helix"
   },
   "WPFInstallheroiclauncher": {
+    "foss": true,
     "category": "Games",
     "choco": "na",
     "content": "Heroic Games Launcher",
@@ -7039,6 +7195,7 @@ $sync.configs.applications = @'
     "winget": "HeroicGamesLauncher.HeroicGamesLauncher"
   },
   "WPFInstallhexchat": {
+    "foss": true,
     "category": "Communications",
     "choco": "hexchat",
     "content": "Hexchat",
@@ -7048,6 +7205,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallhugo": {
+    "foss": true,
     "category": "Utilities",
     "choco": "hugo-extended",
     "content": "Hugo",
@@ -7056,6 +7214,7 @@ $sync.configs.applications = @'
     "winget": "Hugo.Hugo.Extended"
   },
   "WPFInstallhwinfo": {
+    "foss": false,
     "category": "Utilities",
     "choco": "hwinfo",
     "content": "HWiNFO",
@@ -7064,6 +7223,7 @@ $sync.configs.applications = @'
     "winget": "REALiX.HWiNFO"
   },
   "WPFInstallhwmonitor": {
+    "foss": false,
     "category": "Utilities",
     "choco": "hwmonitor",
     "content": "HWMonitor",
@@ -7072,6 +7232,7 @@ $sync.configs.applications = @'
     "winget": "CPUID.HWMonitor"
   },
   "WPFInstallimageglass": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "imageglass",
     "content": "ImageGlass (Image Viewer)",
@@ -7080,6 +7241,7 @@ $sync.configs.applications = @'
     "winget": "DuongDieuPhap.ImageGlass"
   },
   "WPFInstallimgburn": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "imgburn",
     "content": "ImgBurn",
@@ -7088,6 +7250,7 @@ $sync.configs.applications = @'
     "winget": "LIGHTNINGUK.ImgBurn"
   },
   "WPFInstallinkscape": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "inkscape",
     "content": "Inkscape",
@@ -7097,6 +7260,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallinternetdownloadmanager": {
+    "foss": false,
     "category": "Utilities",
     "choco": "internet-download-manager",
     "content": "Internet Download Manager",
@@ -7106,6 +7270,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallirfanview": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "irfanview",
     "content": "IrfanView",
@@ -7114,6 +7279,7 @@ $sync.configs.applications = @'
     "winget": "IrfanSkiljan.IrfanView"
   },
   "WPFInstallitch": {
+    "foss": true,
     "category": "Games",
     "choco": "itch",
     "content": "Itch.io",
@@ -7122,6 +7288,7 @@ $sync.configs.applications = @'
     "winget": "ItchIo.Itch"
   },
   "WPFInstallitunes": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "itunes",
     "content": "iTunes",
@@ -7130,6 +7297,7 @@ $sync.configs.applications = @'
     "winget": "Apple.iTunes"
   },
   "WPFInstalljami": {
+    "foss": true,
     "category": "Communications",
     "choco": "jami",
     "content": "Jami",
@@ -7139,6 +7307,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstalljava25": {
+    "foss": true,
     "category": "Development",
     "choco": "corretto25jdk",
     "content": "Amazon Corretto 25 (LTS)",
@@ -7147,6 +7316,7 @@ $sync.configs.applications = @'
     "winget": "Amazon.Corretto.25.JDK"
   },
   "WPFInstalljava8": {
+    "foss": true,
     "category": "Development",
     "choco": "corretto8jdk",
     "content": "Amazon Corretto 8 (LTS)",
@@ -7155,6 +7325,7 @@ $sync.configs.applications = @'
     "winget": "Amazon.Corretto.8.JDK"
   },
   "WPFInstalljava11": {
+    "foss": true,
     "category": "Development",
     "choco": "corretto11jdk",
     "content": "Amazon Corretto 11 (LTS)",
@@ -7163,6 +7334,7 @@ $sync.configs.applications = @'
     "winget": "Amazon.Corretto.11.JDK"
   },
   "WPFInstalljava17": {
+    "foss": true,
     "category": "Development",
     "choco": "corretto17jdk",
     "content": "Amazon Corretto 17 (LTS)",
@@ -7171,6 +7343,7 @@ $sync.configs.applications = @'
     "winget": "Amazon.Corretto.17.JDK"
   },
   "WPFInstalljava21": {
+    "foss": true,
     "category": "Development",
     "choco": "corretto21jdk",
     "content": "Amazon Corretto 21 (LTS)",
@@ -7179,6 +7352,7 @@ $sync.configs.applications = @'
     "winget": "Amazon.Corretto.21.JDK"
   },
   "WPFInstalljdownloader": {
+    "foss": false,
     "category": "Utilities",
     "choco": "jdownloader",
     "content": "JDownloader",
@@ -7187,6 +7361,7 @@ $sync.configs.applications = @'
     "winget": "AppWork.JDownloader"
   },
   "WPFInstalljellyfinmediaplayer": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "jellyfin-media-player",
     "content": "Jellyfin Media Player",
@@ -7195,6 +7370,7 @@ $sync.configs.applications = @'
     "winget": "Jellyfin.JellyfinMediaPlayer"
   },
   "WPFInstalljellyfinserver": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "jellyfin",
     "content": "Jellyfin Server",
@@ -7203,6 +7379,7 @@ $sync.configs.applications = @'
     "winget": "Jellyfin.Server"
   },
   "WPFInstalljetbrains": {
+    "foss": false,
     "category": "Development",
     "choco": "jetbrainstoolbox",
     "content": "Jetbrains Toolbox",
@@ -7211,6 +7388,7 @@ $sync.configs.applications = @'
     "winget": "JetBrains.Toolbox"
   },
   "WPFInstalljoplin": {
+    "foss": true,
     "category": "Document",
     "choco": "joplin",
     "content": "Joplin (FOSS Notes)",
@@ -7219,6 +7397,7 @@ $sync.configs.applications = @'
     "winget": "Joplin.Joplin"
   },
   "WPFInstalljpegview": {
+    "foss": true,
     "category": "Utilities",
     "choco": "jpegview",
     "content": "JPEG View",
@@ -7227,6 +7406,7 @@ $sync.configs.applications = @'
     "winget": "sylikc.JPEGView"
   },
   "WPFInstallkdeconnect": {
+    "foss": true,
     "category": "Utilities",
     "choco": "kdeconnect-kde",
     "content": "KDE Connect",
@@ -7235,6 +7415,7 @@ $sync.configs.applications = @'
     "winget": "KDE.KDEConnect"
   },
   "WPFInstallkdenlive": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "kdenlive",
     "content": "Kdenlive (Video Editor)",
@@ -7243,6 +7424,7 @@ $sync.configs.applications = @'
     "winget": "KDE.Kdenlive"
   },
   "WPFInstallkeepass": {
+    "foss": true,
     "category": "Utilities",
     "choco": "keepassxc",
     "content": "KeePassXC",
@@ -7251,6 +7433,7 @@ $sync.configs.applications = @'
     "winget": "KeePassXCTeam.KeePassXC"
   },
   "WPFInstallklite": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "k-litecodecpack-standard",
     "content": "K-Lite Codec Standard",
@@ -7259,6 +7442,7 @@ $sync.configs.applications = @'
     "winget": "CodecGuide.K-LiteCodecPack.Standard"
   },
   "WPFInstallkodi": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "kodi",
     "content": "Kodi Media Center",
@@ -7267,6 +7451,7 @@ $sync.configs.applications = @'
     "winget": "XBMCFoundation.Kodi"
   },
   "WPFInstallkrita": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "krita",
     "content": "Krita (Image Editor)",
@@ -7275,6 +7460,7 @@ $sync.configs.applications = @'
     "winget": "KDE.Krita"
   },
   "WPFInstalllazygit": {
+    "foss": true,
     "category": "Development",
     "choco": "lazygit",
     "content": "Lazygit",
@@ -7283,6 +7469,7 @@ $sync.configs.applications = @'
     "winget": "JesseDuffield.lazygit"
   },
   "WPFInstalllibreoffice": {
+    "foss": true,
     "category": "Document",
     "choco": "libreoffice-fresh",
     "content": "LibreOffice",
@@ -7291,6 +7478,7 @@ $sync.configs.applications = @'
     "winget": "TheDocumentFoundation.LibreOffice"
   },
   "WPFInstalllibrewolf": {
+    "foss": true,
     "category": "Browsers",
     "choco": "librewolf",
     "content": "LibreWolf",
@@ -7299,6 +7487,7 @@ $sync.configs.applications = @'
     "winget": "LibreWolf.LibreWolf"
   },
   "WPFInstalllinkshellextension": {
+    "foss": false,
     "category": "Utilities",
     "choco": "linkshellextension",
     "content": "Link Shell extension",
@@ -7307,6 +7496,7 @@ $sync.configs.applications = @'
     "winget": "HermannSchinagl.LinkShellExtension"
   },
   "WPFInstalllinphone": {
+    "foss": true,
     "category": "Communications",
     "choco": "linphone",
     "content": "Linphone",
@@ -7315,6 +7505,7 @@ $sync.configs.applications = @'
     "winget": "BelledonneCommunications.Linphone"
   },
   "WPFInstalllivelywallpaper": {
+    "foss": true,
     "category": "Utilities",
     "choco": "lively",
     "content": "Lively Wallpaper",
@@ -7323,6 +7514,7 @@ $sync.configs.applications = @'
     "winget": "rocksdanister.LivelyWallpaper"
   },
   "WPFInstalllocalsend": {
+    "foss": true,
     "category": "Utilities",
     "choco": "localsend.install",
     "content": "LocalSend",
@@ -7331,6 +7523,7 @@ $sync.configs.applications = @'
     "winget": "LocalSend.LocalSend"
   },
   "WPFInstalllockhunter": {
+    "foss": false,
     "category": "Utilities",
     "choco": "lockhunter",
     "content": "LockHunter",
@@ -7339,6 +7532,7 @@ $sync.configs.applications = @'
     "winget": "CrystalRich.LockHunter"
   },
   "WPFInstalllogseq": {
+    "foss": true,
     "category": "Document",
     "choco": "logseq",
     "content": "Logseq",
@@ -7347,6 +7541,7 @@ $sync.configs.applications = @'
     "winget": "Logseq.Logseq"
   },
   "WPFInstallmalwarebytes": {
+    "foss": false,
     "category": "Utilities",
     "choco": "malwarebytes",
     "content": "Malwarebytes",
@@ -7355,6 +7550,7 @@ $sync.configs.applications = @'
     "winget": "Malwarebytes.Malwarebytes"
   },
   "WPFInstallmasscode": {
+    "foss": true,
     "category": "Document",
     "choco": "na",
     "content": "massCode (Snippet Manager)",
@@ -7363,6 +7559,7 @@ $sync.configs.applications = @'
     "winget": "antonreshetov.massCode"
   },
   "WPFInstallmatrix": {
+    "foss": true,
     "category": "Communications",
     "choco": "element-desktop",
     "content": "Element",
@@ -7371,6 +7568,7 @@ $sync.configs.applications = @'
     "winget": "Element.Element"
   },
   "WPFInstallmeld": {
+    "foss": true,
     "category": "Utilities",
     "choco": "meld",
     "content": "Meld",
@@ -7380,6 +7578,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallminitoolpartitionwizard": {
+    "foss": false,
     "category": "Utilities",
     "choco": "minitoolpartitionwizard",
     "content": "MiniTool Partition Wizard",
@@ -7388,6 +7587,7 @@ $sync.configs.applications = @'
     "winget": "MiniTool.PartitionWizard.Free"
   },
   "WPFInstallModernFlyouts": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "na",
     "content": "Modern Flyouts",
@@ -7397,6 +7597,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallmodrinth": {
+    "foss": true,
     "category": "Games",
     "choco": "modrinth-app",
     "content": "Modrinth App",
@@ -7405,6 +7606,7 @@ $sync.configs.applications = @'
     "winget": "Modrinth.ModrinthApp"
   },
   "WPFInstallmonitorian": {
+    "foss": true,
     "category": "Utilities",
     "choco": "monitorian",
     "content": "Monitorian",
@@ -7413,6 +7615,7 @@ $sync.configs.applications = @'
     "winget": "emoacht.Monitorian"
   },
   "WPFInstallmoonlight": {
+    "foss": true,
     "category": "Games",
     "choco": "moonlight-qt",
     "content": "Moonlight/GameStream Client",
@@ -7421,6 +7624,7 @@ $sync.configs.applications = @'
     "winget": "MoonlightGameStreamingProject.Moonlight"
   },
   "WPFInstallMotrix": {
+    "foss": true,
     "category": "Utilities",
     "choco": "motrix",
     "content": "Motrix Download Manager",
@@ -7430,6 +7634,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallmpcqt": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "mediainfo",
     "content": "mpc-qt",
@@ -7438,6 +7643,7 @@ $sync.configs.applications = @'
     "winget": "mpc-qt.mpc-qt"
   },
   "WPFInstallmpchc": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "mpc-hc-clsid2",
     "content": "Media Player Classic - Home Cinema",
@@ -7446,6 +7652,7 @@ $sync.configs.applications = @'
     "winget": "clsid2.mpc-hc"
   },
   "WPFInstallmremoteng": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "mremoteng",
     "content": "mRemoteNG",
@@ -7454,6 +7661,7 @@ $sync.configs.applications = @'
     "winget": "mRemoteNG.mRemoteNG"
   },
   "WPFInstallmsedgeredirect": {
+    "foss": true,
     "category": "Utilities",
     "choco": "msedgeredirect",
     "content": "MSEdgeRedirect",
@@ -7462,6 +7670,7 @@ $sync.configs.applications = @'
     "winget": "rcmaehl.MSEdgeRedirect"
   },
   "WPFInstallmsiafterburner": {
+    "foss": false,
     "category": "Utilities",
     "choco": "msiafterburner",
     "content": "MSI Afterburner",
@@ -7470,6 +7679,7 @@ $sync.configs.applications = @'
     "winget": "Guru3D.Afterburner"
   },
   "WPFInstallmullvadvpn": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "mullvad-app",
     "content": "Mullvad VPN",
@@ -7479,6 +7689,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallblurautoclicker": {
+    "foss": true,
     "category": "Utilities",
     "choco": "na",
     "content": "BlurAutoClicker",
@@ -7487,6 +7698,7 @@ $sync.configs.applications = @'
     "winget": "Blur009.BlurAutoClicker"
   },
   "WPFInstallBorderlessGaming": {
+    "foss": true,
     "category": "Utilities",
     "choco": "borderlessgaming",
     "content": "Borderless Gaming",
@@ -7495,6 +7707,7 @@ $sync.configs.applications = @'
     "winget": "Codeusa.BorderlessGaming"
   },
   "WPFInstallEqualizerAPO": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "equalizerapo",
     "content": "Equalizer APO",
@@ -7504,6 +7717,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallcodex": {
+    "foss": true,
     "category": "Development",
     "choco": "codex",
     "content": "Codex",
@@ -7512,6 +7726,7 @@ $sync.configs.applications = @'
     "winget": "OpenAI.Codex"
   },
   "WPFInstallCompactGUI": {
+    "foss": true,
     "category": "Utilities",
     "choco": "compactgui",
     "content": "Compact GUI",
@@ -7521,6 +7736,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstalleverything": {
+    "foss": false,
     "category": "Utilities",
     "choco": "everything",
     "content": "Everything",
@@ -7529,6 +7745,7 @@ $sync.configs.applications = @'
     "winget": "voidtools.Everything"
   },
   "WPFInstallExifCleaner": {
+    "foss": true,
     "category": "Utilities",
     "choco": "na",
     "content": "ExifCleaner",
@@ -7537,6 +7754,7 @@ $sync.configs.applications = @'
     "winget": "szTheory.exifcleaner"
   },
   "WPFInstallmullvadbrowser": {
+    "foss": true,
     "category": "Browsers",
     "choco": "na",
     "content": "Mullvad Browser",
@@ -7545,6 +7763,7 @@ $sync.configs.applications = @'
     "winget": "MullvadVPN.MullvadBrowser"
   },
   "WPFInstallmusescore": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "musescore",
     "content": "MuseScore",
@@ -7553,6 +7772,7 @@ $sync.configs.applications = @'
     "winget": "Musescore.Musescore"
   },
   "WPFInstallmusicbee": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "musicbee",
     "content": "MusicBee (Music Player)",
@@ -7561,6 +7781,7 @@ $sync.configs.applications = @'
     "winget": "MusicBee.MusicBee"
   },
   "WPFInstallmp3tag": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "mp3tag",
     "content": "Mp3tag (Metadata Audio Editor)",
@@ -7569,6 +7790,7 @@ $sync.configs.applications = @'
     "winget": "Mp3tag.Mp3tag"
   },
   "WPFInstalltagscanner": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "tagscanner",
     "content": "TagScanner (Tag Scanner)",
@@ -7577,6 +7799,7 @@ $sync.configs.applications = @'
     "winget": "SergeySerkov.TagScanner"
   },
   "WPFInstallnanazip": {
+    "foss": true,
     "category": "Utilities",
     "choco": "nanazip",
     "content": "NanaZip",
@@ -7585,6 +7808,7 @@ $sync.configs.applications = @'
     "winget": "M2Team.NanaZip"
   },
   "WPFInstallnetbird": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "netbird",
     "content": "NetBird",
@@ -7593,6 +7817,7 @@ $sync.configs.applications = @'
     "winget": "netbird"
   },
   "WPFInstallnaps2": {
+    "foss": true,
     "category": "Document",
     "choco": "naps2",
     "content": "NAPS2 (Document Scanner)",
@@ -7601,6 +7826,7 @@ $sync.configs.applications = @'
     "winget": "Cyanfish.NAPS2"
   },
   "WPFInstallneofetchwin": {
+    "foss": true,
     "category": "Utilities",
     "choco": "na",
     "content": "Neofetch",
@@ -7609,6 +7835,7 @@ $sync.configs.applications = @'
     "winget": "nepnep.neofetch-win"
   },
   "WPFInstallneovim": {
+    "foss": true,
     "category": "Development",
     "choco": "neovim",
     "content": "Neovim",
@@ -7617,6 +7844,7 @@ $sync.configs.applications = @'
     "winget": "Neovim.Neovim"
   },
   "WPFInstallnextclouddesktop": {
+    "foss": true,
     "category": "Utilities",
     "choco": "nextcloud-client",
     "content": "Nextcloud Desktop",
@@ -7625,6 +7853,7 @@ $sync.configs.applications = @'
     "winget": "Nextcloud.NextcloudDesktop"
   },
   "WPFInstallnglide": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "na",
     "content": "nGlide (3dfx compatibility)",
@@ -7633,6 +7862,7 @@ $sync.configs.applications = @'
     "winget": "ZeusSoftware.nGlide"
   },
   "WPFInstallnmap": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "nmap",
     "content": "Nmap",
@@ -7641,6 +7871,7 @@ $sync.configs.applications = @'
     "winget": "Insecure.Nmap"
   },
   "WPFInstallnodejs": {
+    "foss": true,
     "category": "Development",
     "choco": "nodejs",
     "content": "NodeJS",
@@ -7649,6 +7880,7 @@ $sync.configs.applications = @'
     "winget": "OpenJS.NodeJS"
   },
   "WPFInstallnodejslts": {
+    "foss": true,
     "category": "Development",
     "choco": "nodejs-lts",
     "content": "NodeJS LTS",
@@ -7657,6 +7889,7 @@ $sync.configs.applications = @'
     "winget": "OpenJS.NodeJS.LTS"
   },
   "WPFInstallnomacs": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "nomacs",
     "content": "Nomacs (Image viewer)",
@@ -7665,6 +7898,7 @@ $sync.configs.applications = @'
     "winget": "nomacs.nomacs"
   },
   "WPFInstallnotepadplus": {
+    "foss": true,
     "category": "Document",
     "choco": "notepadplusplus",
     "content": "Notepad++",
@@ -7673,6 +7907,7 @@ $sync.configs.applications = @'
     "winget": "Notepad++.Notepad++"
   },
   "WPFInstallnuget": {
+    "foss": true,
     "category": "Microsoft Tools",
     "choco": "nuget.commandline",
     "content": "NuGet",
@@ -7681,6 +7916,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.NuGet"
   },
   "WPFInstallnushell": {
+    "foss": true,
     "category": "Utilities",
     "choco": "nushell",
     "content": "Nushell",
@@ -7689,6 +7925,7 @@ $sync.configs.applications = @'
     "winget": "Nushell.Nushell"
   },
   "WPFInstallnvclean": {
+    "foss": false,
     "category": "Utilities",
     "choco": "na",
     "content": "NVCleanstall",
@@ -7697,6 +7934,7 @@ $sync.configs.applications = @'
     "winget": "TechPowerUp.NVCleanstall"
   },
   "WPFInstallnvidiaapp": {
+    "foss": false,
     "category": "Utilities",
     "choco": "nvidia-app",
     "content": "NVIDIA App",
@@ -7705,6 +7943,7 @@ $sync.configs.applications = @'
     "winget": "na"
   },
   "WPFInstallnvm": {
+    "foss": true,
     "category": "Development",
     "choco": "nvm",
     "content": "Node Version Manager",
@@ -7713,6 +7952,7 @@ $sync.configs.applications = @'
     "winget": "CoreyButler.NVMforWindows"
   },
   "WPFInstallobs": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "obs-studio",
     "content": "OBS Studio",
@@ -7721,6 +7961,7 @@ $sync.configs.applications = @'
     "winget": "OBSProject.OBSStudio"
   },
   "WPFInstallobsidian": {
+    "foss": false,
     "category": "Document",
     "choco": "obsidian",
     "content": "Obsidian",
@@ -7729,6 +7970,7 @@ $sync.configs.applications = @'
     "winget": "Obsidian.Obsidian"
   },
   "WPFInstallokular": {
+    "foss": true,
     "category": "Document",
     "choco": "okular",
     "content": "Okular",
@@ -7737,6 +7979,7 @@ $sync.configs.applications = @'
     "winget": "KDE.Okular"
   },
   "WPFInstallonedrive": {
+    "foss": false,
     "category": "Microsoft Tools",
     "choco": "onedrive",
     "content": "OneDrive",
@@ -7745,6 +7988,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.OneDrive"
   },
   "WPFInstallonlyoffice": {
+    "foss": true,
     "category": "Document",
     "choco": "onlyoffice",
     "content": "ONLYOffice Desktop",
@@ -7753,6 +7997,7 @@ $sync.configs.applications = @'
     "winget": "ONLYOFFICE.DesktopEditors"
   },
   "WPFInstallOPAutoClicker": {
+    "foss": false,
     "category": "Utilities",
     "choco": "autoclicker",
     "content": "OPAutoClicker",
@@ -7761,6 +8006,7 @@ $sync.configs.applications = @'
     "winget": "OPAutoClicker.OPAutoClicker"
   },
   "WPFInstallopenhashtab": {
+    "foss": true,
     "category": "Utilities",
     "choco": "openhashtab",
     "content": "OpenHashTab",
@@ -7769,6 +8015,7 @@ $sync.configs.applications = @'
     "winget": "namazso.OpenHashTab"
   },
   "WPFInstallopenoffice": {
+    "foss": true,
     "category": "Document",
     "choco": "openoffice",
     "content": "Apache OpenOffice",
@@ -7777,6 +8024,7 @@ $sync.configs.applications = @'
     "winget": "Apache.OpenOffice"
   },
   "WPFInstallopenrgb": {
+    "foss": true,
     "category": "Utilities",
     "choco": "openrgb",
     "content": "OpenRGB",
@@ -7785,6 +8033,7 @@ $sync.configs.applications = @'
     "winget": "OpenRGB.OpenRGB"
   },
   "WPFInstallopenscad": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "openscad",
     "content": "OpenSCAD",
@@ -7793,6 +8042,7 @@ $sync.configs.applications = @'
     "winget": "OpenSCAD.OpenSCAD"
   },
   "WPFInstallopenshell": {
+    "foss": true,
     "category": "Utilities",
     "choco": "open-shell",
     "content": "Open Shell (Start Menu)",
@@ -7801,6 +8051,7 @@ $sync.configs.applications = @'
     "winget": "Open-Shell.Open-Shell-Menu"
   },
   "WPFInstallOpenVPN": {
+    "foss": false,
     "category": "Pro Tools",
     "choco": "openvpn-connect",
     "content": "OpenVPN Connect",
@@ -7810,6 +8061,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallOverwolf": {
+    "foss": false,
     "category": "Games",
     "choco": "overwolf",
     "content": "Overwolf",
@@ -7818,6 +8070,7 @@ $sync.configs.applications = @'
     "winget": "Overwolf.CurseForge"
   },
   "WPFInstallOVirtualBox": {
+    "foss": true,
     "category": "Utilities",
     "choco": "virtualbox",
     "content": "Oracle VirtualBox",
@@ -7826,6 +8079,7 @@ $sync.configs.applications = @'
     "winget": "Oracle.VirtualBox"
   },
   "WPFInstallownclouddesktop": {
+    "foss": true,
     "category": "Utilities",
     "choco": "owncloud-client",
     "content": "ownCloud Desktop",
@@ -7834,6 +8088,7 @@ $sync.configs.applications = @'
     "winget": "ownCloud.ownCloudDesktop"
   },
   "WPFInstallPaintdotnet": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "paint.net",
     "content": "Paint.NET",
@@ -7842,6 +8097,7 @@ $sync.configs.applications = @'
     "winget": "dotPDN.PaintDotNet"
   },
   "WPFInstallparsec": {
+    "foss": false,
     "category": "Utilities",
     "choco": "parsec",
     "content": "Parsec",
@@ -7850,6 +8106,7 @@ $sync.configs.applications = @'
     "winget": "Parsec.Parsec"
   },
   "WPFInstallpdf24creator": {
+    "foss": false,
     "category": "Document",
     "choco": "pdf24",
     "content": "PDF24 creator",
@@ -7858,6 +8115,7 @@ $sync.configs.applications = @'
     "winget": "geeksoftwareGmbH.PDF24Creator"
   },
   "WPFInstallpdfsam": {
+    "foss": true,
     "category": "Document",
     "choco": "pdfsam",
     "content": "PDFsam Basic",
@@ -7866,6 +8124,7 @@ $sync.configs.applications = @'
     "winget": "PDFsam.PDFsam"
   },
   "WPFInstallpeazip": {
+    "foss": true,
     "category": "Utilities",
     "choco": "peazip",
     "content": "PeaZip",
@@ -7874,6 +8133,7 @@ $sync.configs.applications = @'
     "winget": "Giorgiotani.Peazip"
   },
   "WPFInstallpiimager": {
+    "foss": true,
     "category": "Utilities",
     "choco": "rpi-imager",
     "content": "Raspberry Pi Imager",
@@ -7882,6 +8142,7 @@ $sync.configs.applications = @'
     "winget": "RaspberryPiFoundation.RaspberryPiImager"
   },
   "WPFInstallplaynite": {
+    "foss": true,
     "category": "Games",
     "choco": "playnite",
     "content": "Playnite",
@@ -7890,6 +8151,7 @@ $sync.configs.applications = @'
     "winget": "Playnite.Playnite"
   },
   "WPFInstallplex": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "plexmediaserver",
     "content": "Plex Media Server",
@@ -7898,6 +8160,7 @@ $sync.configs.applications = @'
     "winget": "Plex.PlexMediaServer"
   },
   "WPFInstallplexdesktop": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "plex",
     "content": "Plex Desktop",
@@ -7907,6 +8170,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallpnpm": {
+    "foss": true,
     "category": "Development",
     "content": "pnpm",
     "description": "pnpm is a fast and disk space efficient package manager for JavaScript and Node.js applications.",
@@ -7915,6 +8179,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallpolicyplus": {
+    "foss": true,
     "category": "Utilities",
     "choco": "na",
     "content": "Policy Plus",
@@ -7923,6 +8188,7 @@ $sync.configs.applications = @'
     "winget": "Fleex255.PolicyPlus"
   },
   "WPFInstallPortmaster": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "portmaster",
     "content": "Portmaster",
@@ -7931,6 +8197,7 @@ $sync.configs.applications = @'
     "winget": "Safing.Portmaster"
   },
   "WPFInstallposh": {
+    "foss": true,
     "category": "Development",
     "choco": "oh-my-posh",
     "content": "Oh My Posh (Prompt)",
@@ -7939,6 +8206,7 @@ $sync.configs.applications = @'
     "winget": "JanDeDobbeleer.OhMyPosh"
   },
   "WPFInstallpostman": {
+    "foss": false,
     "category": "Development",
     "choco": "postman",
     "content": "Postman",
@@ -7947,6 +8215,7 @@ $sync.configs.applications = @'
     "winget": "Postman.Postman"
   },
   "WPFInstallpowerautomate": {
+    "foss": false,
     "category": "Microsoft Tools",
     "choco": "powerautomatedesktop",
     "content": "Power Automate",
@@ -7955,6 +8224,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.PowerAutomateDesktop"
   },
   "WPFInstallpowerbi": {
+    "foss": false,
     "category": "Microsoft Tools",
     "choco": "powerbi",
     "content": "Power BI",
@@ -7963,6 +8233,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.PowerBI"
   },
   "WPFInstallpowershell": {
+    "foss": true,
     "category": "Microsoft Tools",
     "choco": "powershell-core",
     "content": "PowerShell",
@@ -7971,6 +8242,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.PowerShell"
   },
   "WPFInstallpowertoys": {
+    "foss": true,
     "category": "Microsoft Tools",
     "choco": "powertoys",
     "content": "PowerToys",
@@ -7979,6 +8251,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.PowerToys"
   },
   "WPFInstallprismlauncher": {
+    "foss": true,
     "category": "Games",
     "choco": "prismlauncher",
     "content": "Prism Launcher",
@@ -7988,6 +8261,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallprocessexplorer": {
+    "foss": false,
     "category": "Microsoft Tools",
     "choco": "procexp",
     "content": "Process Explorer",
@@ -7996,6 +8270,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.Sysinternals.ProcessExplorer"
   },
   "WPFInstallprocesslasso": {
+    "foss": false,
     "category": "Utilities",
     "choco": "plasso",
     "content": "Process Lasso",
@@ -8004,6 +8279,7 @@ $sync.configs.applications = @'
     "winget": "BitSum.ProcessLasso"
   },
   "WPFInstallprotonauth": {
+    "foss": true,
     "category": "Utilities",
     "choco": "protonauth",
     "content": "Proton Authenticator",
@@ -8013,6 +8289,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallprotondrive": {
+    "foss": true,
     "category": "Utilities",
     "choco": "protondrive",
     "content": "Proton Drive",
@@ -8022,6 +8299,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallprotonmail": {
+    "foss": true,
     "category": "Communications",
     "choco": "protonmail",
     "content": "Proton Mail",
@@ -8030,6 +8308,7 @@ $sync.configs.applications = @'
     "winget": "Proton.ProtonMail"
   },
   "WPFInstallprotonpass": {
+    "foss": true,
     "category": "Utilities",
     "choco": "protonpass",
     "content": "Proton Pass",
@@ -8038,6 +8317,7 @@ $sync.configs.applications = @'
     "winget": "Proton.ProtonPass"
   },
   "WPFInstallprotonvpn": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "protonvpn",
     "content": "Proton VPN",
@@ -8046,6 +8326,7 @@ $sync.configs.applications = @'
     "winget": "Proton.ProtonVPN"
   },
   "WPFInstallprocessmonitor": {
+    "foss": false,
     "category": "Microsoft Tools",
     "choco": "procexp",
     "content": "SysInternals Process Monitor",
@@ -8054,6 +8335,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.Sysinternals.ProcessMonitor"
   },
   "WPFInstallorcaslicer": {
+    "foss": true,
     "category": "Utilities",
     "choco": "orcaslicer",
     "content": "OrcaSlicer",
@@ -8062,6 +8344,7 @@ $sync.configs.applications = @'
     "winget": "SoftFever.OrcaSlicer"
   },
   "WPFInstallprucaslicer": {
+    "foss": true,
     "category": "Utilities",
     "choco": "prusaslicer",
     "content": "PrusaSlicer",
@@ -8070,6 +8353,7 @@ $sync.configs.applications = @'
     "winget": "Prusa3d.PrusaSlicer"
   },
   "WPFInstallpsremoteplay": {
+    "foss": false,
     "category": "Games",
     "choco": "ps-remote-play",
     "content": "PS Remote Play",
@@ -8078,6 +8362,7 @@ $sync.configs.applications = @'
     "winget": "PlayStation.PSRemotePlay"
   },
   "WPFInstallputty": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "putty",
     "content": "PuTTY",
@@ -8086,6 +8371,7 @@ $sync.configs.applications = @'
     "winget": "PuTTY.PuTTY"
   },
   "WPFInstallpython3": {
+    "foss": true,
     "category": "Development",
     "choco": "python",
     "content": "Python3",
@@ -8094,6 +8380,7 @@ $sync.configs.applications = @'
     "winget": "Python.Python.3.13"
   },
   "WPFInstallqbittorrent": {
+    "foss": true,
     "category": "Utilities",
     "choco": "qbittorrent",
     "content": "qBittorrent",
@@ -8102,6 +8389,7 @@ $sync.configs.applications = @'
     "winget": "qBittorrent.qBittorrent"
   },
   "WPFInstalltransmission": {
+    "foss": true,
     "category": "Utilities",
     "choco": "transmission",
     "content": "Transmission",
@@ -8110,6 +8398,7 @@ $sync.configs.applications = @'
     "winget": "Transmission.Transmission"
   },
   "WPFInstalltixati": {
+    "foss": false,
     "category": "Utilities",
     "choco": "tixati.portable",
     "content": "Tixati",
@@ -8118,6 +8407,7 @@ $sync.configs.applications = @'
     "winget": "Tixati.Tixati.Portable"
   },
   "WPFInstallqtox": {
+    "foss": true,
     "category": "Communications",
     "choco": "qtox",
     "content": "QTox",
@@ -8126,6 +8416,7 @@ $sync.configs.applications = @'
     "winget": "Tox.qTox"
   },
   "WPFInstallquicklook": {
+    "foss": true,
     "category": "Utilities",
     "choco": "quicklook",
     "content": "Quicklook",
@@ -8134,6 +8425,7 @@ $sync.configs.applications = @'
     "winget": "QL-Win.QuickLook"
   },
   "WPFInstallrainmeter": {
+    "foss": true,
     "category": "Utilities",
     "choco": "na",
     "content": "Rainmeter",
@@ -8142,6 +8434,7 @@ $sync.configs.applications = @'
     "winget": "Rainmeter.Rainmeter"
   },
   "WPFInstallraycast": {
+    "foss": false,
     "category": "Utilities",
     "choco": "na",
     "content": "Raycast",
@@ -8150,6 +8443,7 @@ $sync.configs.applications = @'
     "winget": "msstore:9pfxxshc64h3"
   },
   "WPFInstallrevo": {
+    "foss": false,
     "category": "Utilities",
     "choco": "revo-uninstaller",
     "content": "Revo Uninstaller",
@@ -8158,6 +8452,7 @@ $sync.configs.applications = @'
     "winget": "RevoUninstaller.RevoUninstaller"
   },
   "WPFInstallWiseProgramUninstaller": {
+    "foss": false,
     "category": "Utilities",
     "choco": "na",
     "content": "Wise Program Uninstaller (WiseCleaner)",
@@ -8166,6 +8461,7 @@ $sync.configs.applications = @'
     "winget": "WiseCleaner.WiseProgramUninstaller"
   },
   "WPFInstallrevolt": {
+    "foss": true,
     "category": "Communications",
     "choco": "na",
     "content": "Revolt",
@@ -8174,6 +8470,7 @@ $sync.configs.applications = @'
     "winget": "Revolt.RevoltDesktop"
   },
   "WPFInstallripgrep": {
+    "foss": true,
     "category": "Utilities",
     "choco": "ripgrep",
     "content": "Ripgrep",
@@ -8183,6 +8480,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallRuby": {
+    "foss": true,
     "category": "Development",
     "choco": "ruby",
     "content": "Ruby",
@@ -8191,6 +8489,7 @@ $sync.configs.applications = @'
     "winget": "RubyInstallerTeam.Ruby.4.0"
   },
   "WPFInstallrufus": {
+    "foss": true,
     "category": "Utilities",
     "choco": "rufus",
     "content": "Rufus Imager",
@@ -8199,6 +8498,7 @@ $sync.configs.applications = @'
     "winget": "Rufus.Rufus"
   },
   "WPFInstallrustdesk": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "rustdesk.portable",
     "content": "RustDesk",
@@ -8207,6 +8507,7 @@ $sync.configs.applications = @'
     "winget": "RustDesk.RustDesk"
   },
   "WPFInstallrustlang": {
+    "foss": true,
     "category": "Development",
     "choco": "rust",
     "content": "Rust",
@@ -8215,6 +8516,7 @@ $sync.configs.applications = @'
     "winget": "Rustlang.Rust.MSVC"
   },
   "WPFInstallsagethumbs": {
+    "foss": true,
     "category": "Utilities",
     "choco": "sagethumbs",
     "content": "SageThumbs",
@@ -8223,6 +8525,7 @@ $sync.configs.applications = @'
     "winget": "CherubicSoftware.SageThumbs"
   },
   "WPFInstallsamsungmagician": {
+    "foss": false,
     "category": "Utilities",
     "choco": "samsung-magician",
     "content": "Samsung Magician",
@@ -8231,6 +8534,7 @@ $sync.configs.applications = @'
     "winget": "Samsung.SamsungMagician"
   },
   "WPFInstallsandboxie": {
+    "foss": true,
     "category": "Utilities",
     "choco": "sandboxie",
     "content": "Sandboxie Plus",
@@ -8239,6 +8543,7 @@ $sync.configs.applications = @'
     "winget": "Sandboxie.Plus"
   },
   "WPFInstallsdio": {
+    "foss": true,
     "category": "Utilities",
     "choco": "sdio",
     "content": "Snappy Driver Installer Origin",
@@ -8247,6 +8552,7 @@ $sync.configs.applications = @'
     "winget": "GlennDelahoy.SnappyDriverInstallerOrigin"
   },
   "WPFInstallsession": {
+    "foss": true,
     "category": "Communications",
     "choco": "session",
     "content": "Session",
@@ -8255,6 +8561,7 @@ $sync.configs.applications = @'
     "winget": "Session.Session"
   },
   "WPFInstallsharex": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "sharex",
     "content": "ShareX (Screenshots)",
@@ -8263,6 +8570,7 @@ $sync.configs.applications = @'
     "winget": "ShareX.ShareX"
   },
   "WPFInstallnilesoftShell": {
+    "foss": false,
     "category": "Utilities",
     "choco": "nilesoft-shell",
     "content": "Nilesoft Shell",
@@ -8271,6 +8579,7 @@ $sync.configs.applications = @'
     "winget": "Nilesoft.Shell"
   },
   "WPFInstallsidequest": {
+    "foss": false,
     "category": "Games",
     "choco": "sidequest",
     "content": "SideQuestVR",
@@ -8279,6 +8588,7 @@ $sync.configs.applications = @'
     "winget": "SideQuestVR.SideQuest"
   },
   "WPFInstallsignal": {
+    "foss": true,
     "category": "Communications",
     "choco": "signal",
     "content": "Signal",
@@ -8287,6 +8597,7 @@ $sync.configs.applications = @'
     "winget": "OpenWhisperSystems.Signal"
   },
   "WPFInstallsignalrgb": {
+    "foss": false,
     "category": "Utilities",
     "choco": "na",
     "content": "SignalRGB",
@@ -8295,6 +8606,7 @@ $sync.configs.applications = @'
     "winget": "WhirlwindFX.SignalRgb"
   },
   "WPFInstallsimplenote": {
+    "foss": true,
     "category": "Document",
     "choco": "simplenote",
     "content": "simplenote",
@@ -8303,6 +8615,7 @@ $sync.configs.applications = @'
     "winget": "Automattic.Simplenote"
   },
   "WPFInstallsimplewall": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "simplewall",
     "content": "Simplewall",
@@ -8311,6 +8624,7 @@ $sync.configs.applications = @'
     "winget": "Henry++.simplewall"
   },
   "WPFInstallskype": {
+    "foss": false,
     "category": "Communications",
     "choco": "skype",
     "content": "Skype",
@@ -8319,6 +8633,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.Skype"
   },
   "WPFInstallslack": {
+    "foss": false,
     "category": "Communications",
     "choco": "slack",
     "content": "Slack",
@@ -8327,6 +8642,7 @@ $sync.configs.applications = @'
     "winget": "SlackTechnologies.Slack"
   },
   "WPFInstallspacedrive": {
+    "foss": true,
     "category": "Utilities",
     "choco": "na",
     "content": "Spacedrive File Manager",
@@ -8335,6 +8651,7 @@ $sync.configs.applications = @'
     "winget": "spacedrive.Spacedrive"
   },
   "WPFInstallspacesniffer": {
+    "foss": false,
     "category": "Utilities",
     "choco": "spacesniffer",
     "content": "SpaceSniffer",
@@ -8343,6 +8660,7 @@ $sync.configs.applications = @'
     "winget": "UderzoSoftware.SpaceSniffer"
   },
   "WPFInstallspotube": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "spotube",
     "content": "Spotube",
@@ -8351,6 +8669,7 @@ $sync.configs.applications = @'
     "winget": "KRTirtho.Spotube"
   },
   "WPFInstallstarship": {
+    "foss": true,
     "category": "Development",
     "choco": "starship",
     "content": "Starship (Shell Prompt)",
@@ -8360,6 +8679,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallstartallback": {
+    "foss": false,
     "category": "Utilities",
     "choco": "StartAllBack",
     "content": "StartAllBack",
@@ -8368,6 +8688,7 @@ $sync.configs.applications = @'
     "winget": "StartIsBack.StartAllBack"
   },
   "WPFInstallsteam": {
+    "foss": false,
     "category": "Games",
     "choco": "steam-client",
     "content": "Steam",
@@ -8376,6 +8697,7 @@ $sync.configs.applications = @'
     "winget": "Valve.Steam"
   },
   "WPFInstallstrawberry": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "strawberrymusicplayer",
     "content": "Strawberry (Music Player)",
@@ -8384,6 +8706,7 @@ $sync.configs.applications = @'
     "winget": "StrawberryMusicPlayer.Strawberry"
   },
   "WPFInstallstremio": {
+    "foss": true,
     "winget": "Stremio.Stremio",
     "choco": "stremio",
     "category": "Multimedia Tools",
@@ -8392,6 +8715,7 @@ $sync.configs.applications = @'
     "description": "Stremio is a media center application that allows users to organize and stream their favorite movies, TV shows, and video content."
   },
   "WPFInstallsublimemerge": {
+    "foss": false,
     "category": "Development",
     "choco": "sublimemerge",
     "content": "Sublime Merge",
@@ -8400,6 +8724,7 @@ $sync.configs.applications = @'
     "winget": "SublimeHQ.SublimeMerge"
   },
   "WPFInstallsublimetext": {
+    "foss": false,
     "category": "Development",
     "choco": "sublimetext4",
     "content": "Sublime Text",
@@ -8408,6 +8733,7 @@ $sync.configs.applications = @'
     "winget": "SublimeHQ.SublimeText.4"
   },
   "WPFInstallsumatra": {
+    "foss": true,
     "category": "Document",
     "choco": "sumatrapdf",
     "content": "Sumatra PDF",
@@ -8416,6 +8742,7 @@ $sync.configs.applications = @'
     "winget": "SumatraPDF.SumatraPDF"
   },
   "WPFInstallpdfgear": {
+    "foss": false,
     "category": "Document",
     "choco": "na",
     "content": "PDFgear",
@@ -8424,6 +8751,7 @@ $sync.configs.applications = @'
     "winget": "PDFgear.PDFgear"
   },
   "WPFInstallsunshine": {
+    "foss": true,
     "category": "Games",
     "choco": "sunshine",
     "content": "Sunshine/GameStream Server",
@@ -8432,6 +8760,7 @@ $sync.configs.applications = @'
     "winget": "LizardByte.Sunshine"
   },
   "WPFInstallsuperf4": {
+    "foss": true,
     "category": "Utilities",
     "choco": "superf4",
     "content": "SuperF4",
@@ -8440,6 +8769,7 @@ $sync.configs.applications = @'
     "winget": "StefanSundin.Superf4"
   },
   "WPFInstallswift": {
+    "foss": true,
     "category": "Development",
     "choco": "na",
     "content": "Swift toolchain",
@@ -8448,6 +8778,7 @@ $sync.configs.applications = @'
     "winget": "Swift.Toolchain"
   },
   "WPFInstallsynctrayzor": {
+    "foss": true,
     "category": "Utilities",
     "choco": "synctrayzor",
     "content": "SyncTrayzor",
@@ -8456,6 +8787,7 @@ $sync.configs.applications = @'
     "winget": "SyncTrayzor.SyncTrayzor"
   },
   "WPFInstallsqlmanagementstudio": {
+    "foss": false,
     "category": "Microsoft Tools",
     "choco": "sql-server-management-studio",
     "content": "Microsoft SQL Server Management Studio",
@@ -8465,6 +8797,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallsysteminformer": {
+    "foss": true,
     "category": "Development",
     "choco": "systeminformer",
     "content": "System Informer",
@@ -8473,6 +8806,7 @@ $sync.configs.applications = @'
     "winget": "WinsiderSS.SystemInformer"
   },
   "WPFInstalltabby": {
+    "foss": true,
     "category": "Utilities",
     "choco": "tabby",
     "content": "Tabby.sh",
@@ -8481,6 +8815,7 @@ $sync.configs.applications = @'
     "winget": "Eugeny.Tabby"
   },
   "WPFInstalltailscale": {
+    "foss": true,
     "category": "Utilities",
     "choco": "tailscale",
     "content": "Tailscale",
@@ -8489,6 +8824,7 @@ $sync.configs.applications = @'
     "winget": "tailscale.tailscale"
   },
   "WPFInstallTcNoAccSwitcher": {
+    "foss": true,
     "category": "Games",
     "choco": "tcno-acc-switcher",
     "content": "TCNO Account Switcher",
@@ -8497,6 +8833,7 @@ $sync.configs.applications = @'
     "winget": "TechNobo.TcNoAccountSwitcher"
   },
   "WPFInstalltcpview": {
+    "foss": false,
     "category": "Microsoft Tools",
     "choco": "tcpview",
     "content": "SysInternals TCPView",
@@ -8505,6 +8842,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.Sysinternals.TCPView"
   },
   "WPFInstallteams": {
+    "foss": false,
     "category": "Communications",
     "choco": "microsoft-teams",
     "content": "Teams",
@@ -8514,6 +8852,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallteamspeak3": {
+    "foss": false,
     "category": "Communications",
     "choco": "teamspeak",
     "content": "TeamSpeak 3",
@@ -8522,6 +8861,7 @@ $sync.configs.applications = @'
     "winget": "TeamSpeakSystems.TeamSpeakClient"
   },
   "WPFInstallteamviewer": {
+    "foss": false,
     "category": "Utilities",
     "choco": "teamviewer9",
     "content": "TeamViewer",
@@ -8530,6 +8870,7 @@ $sync.configs.applications = @'
     "winget": "TeamViewer.TeamViewer"
   },
   "WPFInstalltelegram": {
+    "foss": true,
     "category": "Communications",
     "choco": "telegram",
     "content": "Telegram",
@@ -8538,6 +8879,7 @@ $sync.configs.applications = @'
     "winget": "Telegram.TelegramDesktop"
   },
   "WPFInstallunigram": {
+    "foss": true,
     "category": "Communications",
     "choco": "na",
     "content": "Unigram",
@@ -8546,6 +8888,7 @@ $sync.configs.applications = @'
     "winget": "Telegram.Unigram"
   },
   "WPFInstallterminal": {
+    "foss": true,
     "category": "Microsoft Tools",
     "choco": "microsoft-windows-terminal",
     "content": "Windows Terminal",
@@ -8554,6 +8897,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.WindowsTerminal"
   },
   "WPFInstallThonny": {
+    "foss": true,
     "category": "Development",
     "choco": "thonny",
     "content": "Thonny Python IDE",
@@ -8562,6 +8906,7 @@ $sync.configs.applications = @'
     "winget": "AivarAnnamaa.Thonny"
   },
   "WPFInstallMuEditor": {
+    "foss": true,
     "category": "Development",
     "choco": "na",
     "content": "Code With Mu (Mu Editor)",
@@ -8570,6 +8915,7 @@ $sync.configs.applications = @'
     "winget": "Mu.Mu"
   },
   "WPFInstallthorium": {
+    "foss": true,
     "category": "Browsers",
     "choco": "na",
     "content": "Thorium Browser AVX2",
@@ -8578,6 +8924,7 @@ $sync.configs.applications = @'
     "winget": "Alex313031.Thorium.AVX2"
   },
   "WPFInstallthunderbird": {
+    "foss": true,
     "category": "Communications",
     "choco": "thunderbird",
     "content": "Thunderbird",
@@ -8586,6 +8933,7 @@ $sync.configs.applications = @'
     "winget": "Mozilla.Thunderbird"
   },
   "WPFInstallbetterbird": {
+    "foss": true,
     "category": "Communications",
     "choco": "betterbird",
     "content": "Betterbird",
@@ -8594,6 +8942,7 @@ $sync.configs.applications = @'
     "winget": "Betterbird.Betterbird"
   },
   "WPFInstalltidal": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "na",
     "content": "Tidal",
@@ -8602,6 +8951,7 @@ $sync.configs.applications = @'
     "winget": "9NNCB5BS59PH"
   },
   "WPFInstalltor": {
+    "foss": true,
     "category": "Browsers",
     "choco": "tor-browser",
     "content": "Tor Browser",
@@ -8610,6 +8960,7 @@ $sync.configs.applications = @'
     "winget": "TorProject.TorBrowser"
   },
   "WPFInstalltotalcommander": {
+    "foss": false,
     "category": "Utilities",
     "choco": "TotalCommander",
     "content": "Total Commander",
@@ -8618,6 +8969,7 @@ $sync.configs.applications = @'
     "winget": "Ghisler.TotalCommander"
   },
   "WPFInstalltreesize": {
+    "foss": false,
     "category": "Utilities",
     "choco": "treesizefree",
     "content": "TreeSize Free",
@@ -8626,6 +8978,7 @@ $sync.configs.applications = @'
     "winget": "JAMSoftware.TreeSize.Free"
   },
   "WPFInstallttaskbar": {
+    "foss": true,
     "category": "Utilities",
     "choco": "translucenttb",
     "content": "TranslucentTB",
@@ -8634,6 +8987,7 @@ $sync.configs.applications = @'
     "winget": "9PF4KZ2VN4W9"
   },
   "WPFInstalltwinkletray": {
+    "foss": true,
     "category": "Utilities",
     "choco": "twinkle-tray",
     "content": "Twinkle Tray",
@@ -8642,6 +8996,7 @@ $sync.configs.applications = @'
     "winget": "xanderfrangos.twinkletray"
   },
   "WPFInstallubisoft": {
+    "foss": false,
     "category": "Games",
     "choco": "ubisoft-connect",
     "content": "Ubisoft Connect",
@@ -8650,6 +9005,7 @@ $sync.configs.applications = @'
     "winget": "Ubisoft.Connect"
   },
   "WPFInstallungoogled": {
+    "foss": true,
     "category": "Browsers",
     "choco": "ungoogled-chromium",
     "content": "Ungoogled",
@@ -8658,6 +9014,7 @@ $sync.configs.applications = @'
     "winget": "eloston.ungoogled-chromium"
   },
   "WPFInstallunity": {
+    "foss": false,
     "category": "Development",
     "choco": "unityhub",
     "content": "Unity Game Engine",
@@ -8667,6 +9024,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstalluv": {
+    "foss": true,
     "category": "Development",
     "choco": "uv",
     "content": "uv",
@@ -8675,6 +9033,7 @@ $sync.configs.applications = @'
     "winget": "astral-sh.uv"
   },
   "WPFInstallvagrant": {
+    "foss": false,
     "category": "Development",
     "choco": "vagrant",
     "content": "Vagrant",
@@ -8683,6 +9042,7 @@ $sync.configs.applications = @'
     "winget": "Hashicorp.Vagrant"
   },
   "WPFInstallvc2015_32": {
+    "foss": false,
     "category": "Microsoft Tools",
     "choco": "na",
     "content": "Visual C++ 2015-2022 32-bit",
@@ -8691,6 +9051,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.VCRedist.2015+.x86"
   },
   "WPFInstallvc2015_64": {
+    "foss": false,
     "category": "Microsoft Tools",
     "choco": "na",
     "content": "Visual C++ 2015-2022 64-bit",
@@ -8699,6 +9060,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.VCRedist.2015+.x64"
   },
   "WPFInstallventoy": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "ventoy",
     "content": "Ventoy",
@@ -8707,6 +9069,7 @@ $sync.configs.applications = @'
     "winget": "Ventoy.Ventoy"
   },
   "WPFInstallvesktop": {
+    "foss": true,
     "category": "Communications",
     "choco": "na",
     "content": "Vesktop",
@@ -8715,6 +9078,7 @@ $sync.configs.applications = @'
     "winget": "Vencord.Vesktop"
   },
   "WPFInstallviber": {
+    "foss": false,
     "category": "Communications",
     "choco": "viber",
     "content": "Viber",
@@ -8723,6 +9087,7 @@ $sync.configs.applications = @'
     "winget": "Rakuten.Viber"
   },
   "WPFInstallvideomass": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "na",
     "content": "Videomass",
@@ -8731,6 +9096,7 @@ $sync.configs.applications = @'
     "winget": "GianlucaPernigotto.Videomass"
   },
   "WPFInstallvisualstudio": {
+    "foss": false,
     "category": "Development",
     "choco": "visualstudio2022community",
     "content": "Visual Studio 2022",
@@ -8740,6 +9106,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallvisualstudio2022": {
+    "foss": false,
     "category": "Development",
     "choco": "visualstudio2022community",
     "content": "Visual Studio 2022",
@@ -8749,6 +9116,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallvisualstudio2026": {
+    "foss": false,
     "category": "Development",
     "choco": "visualstudio2026community",
     "content": "Visual Studio 2026",
@@ -8757,6 +9125,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.VisualStudio.Community"
   },
   "WPFInstallvivaldi": {
+    "foss": false,
     "category": "Browsers",
     "choco": "vivaldi",
     "content": "Vivaldi",
@@ -8765,6 +9134,7 @@ $sync.configs.applications = @'
     "winget": "Vivaldi.Vivaldi"
   },
   "WPFInstallvlc": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "vlc",
     "content": "VLC (Video Player)",
@@ -8773,6 +9143,7 @@ $sync.configs.applications = @'
     "winget": "VideoLAN.VLC"
   },
   "WPFInstallvoicemeeter": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "voicemeeter",
     "content": "Voicemeeter (Audio)",
@@ -8781,6 +9152,7 @@ $sync.configs.applications = @'
     "winget": "VB-Audio.Voicemeeter"
   },
   "WPFInstallVoicemeeterPotato": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "voicemeeter-potato",
     "content": "Voicemeeter Potato",
@@ -8789,6 +9161,7 @@ $sync.configs.applications = @'
     "winget": "VB-Audio.Voicemeeter.Potato"
   },
   "WPFInstallvrdesktopstreamer": {
+    "foss": false,
     "category": "Games",
     "choco": "na",
     "content": "Virtual Desktop Streamer",
@@ -8797,6 +9170,7 @@ $sync.configs.applications = @'
     "winget": "VirtualDesktop.Streamer"
   },
   "WPFInstallvscode": {
+    "foss": true,
     "category": "Development",
     "choco": "vscode",
     "content": "VS Code",
@@ -8805,6 +9179,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.VisualStudioCode"
   },
   "WPFInstallvscodium": {
+    "foss": true,
     "category": "Development",
     "choco": "vscodium",
     "content": "VS Codium",
@@ -8813,6 +9188,7 @@ $sync.configs.applications = @'
     "winget": "VSCodium.VSCodium"
   },
   "WPFInstallwaterfox": {
+    "foss": true,
     "category": "Browsers",
     "choco": "waterfox",
     "content": "Waterfox",
@@ -8821,6 +9197,7 @@ $sync.configs.applications = @'
     "winget": "Waterfox.Waterfox"
   },
   "WPFInstallwazuh": {
+    "foss": true,
     "category": "Utilities",
     "choco": "wazuh-agent",
     "content": "Wazuh.",
@@ -8829,6 +9206,7 @@ $sync.configs.applications = @'
     "winget": "Wazuh.WazuhAgent"
   },
   "WPFInstallwezterm": {
+    "foss": true,
     "category": "Development",
     "choco": "wezterm",
     "content": "Wezterm",
@@ -8837,6 +9215,7 @@ $sync.configs.applications = @'
     "winget": "wez.wezterm"
   },
   "WPFInstallwindowspchealth": {
+    "foss": false,
     "category": "Utilities",
     "choco": "na",
     "content": "Windows PC Health Check",
@@ -8845,6 +9224,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.WindowsPCHealthCheck"
   },
   "WPFInstallWindowGrid": {
+    "foss": true,
     "category": "Utilities",
     "choco": "windowgrid",
     "content": "WindowGrid",
@@ -8853,6 +9233,7 @@ $sync.configs.applications = @'
     "winget": "na"
   },
   "WPFInstallwingetui": {
+    "foss": true,
     "category": "Utilities",
     "choco": "wingetui",
     "content": "UniGetUI",
@@ -8861,6 +9242,7 @@ $sync.configs.applications = @'
     "winget": "MartiCliment.UniGetUI"
   },
   "WPFInstallwinmerge": {
+    "foss": true,
     "category": "Document",
     "choco": "winmerge",
     "content": "WinMerge",
@@ -8869,6 +9251,7 @@ $sync.configs.applications = @'
     "winget": "WinMerge.WinMerge"
   },
   "WPFInstallwinpaletter": {
+    "foss": true,
     "category": "Utilities",
     "choco": "WinPaletter",
     "content": "WinPaletter",
@@ -8877,6 +9260,7 @@ $sync.configs.applications = @'
     "winget": "Abdelrhman-AK.WinPaletter"
   },
   "WPFInstallwinrar": {
+    "foss": false,
     "category": "Utilities",
     "choco": "winrar",
     "content": "WinRAR",
@@ -8885,6 +9269,7 @@ $sync.configs.applications = @'
     "winget": "RARLab.WinRAR"
   },
   "WPFInstallwinscp": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "winscp",
     "content": "WinSCP",
@@ -8893,6 +9278,7 @@ $sync.configs.applications = @'
     "winget": "WinSCP.WinSCP"
   },
   "WPFInstallwireguard": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "wireguard",
     "content": "WireGuard",
@@ -8901,6 +9287,7 @@ $sync.configs.applications = @'
     "winget": "WireGuard.WireGuard"
   },
   "WPFInstallwireshark": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "wireshark",
     "content": "Wireshark",
@@ -8909,6 +9296,7 @@ $sync.configs.applications = @'
     "winget": "WiresharkFoundation.Wireshark"
   },
   "WPFInstallwisetoys": {
+    "foss": false,
     "category": "Utilities",
     "choco": "na",
     "content": "WiseToys",
@@ -8917,6 +9305,7 @@ $sync.configs.applications = @'
     "winget": "WiseCleaner.WiseToys"
   },
   "WPFInstallTeraCopy": {
+    "foss": false,
     "category": "Utilities",
     "choco": "TeraCopy",
     "content": "TeraCopy",
@@ -8925,6 +9314,7 @@ $sync.configs.applications = @'
     "winget": "CodeSector.TeraCopy"
   },
   "WPFInstallwizfile": {
+    "foss": false,
     "category": "Utilities",
     "choco": "na",
     "content": "WizFile",
@@ -8933,6 +9323,7 @@ $sync.configs.applications = @'
     "winget": "AntibodySoftware.WizFile"
   },
   "WPFInstallwiztree": {
+    "foss": false,
     "category": "Utilities",
     "choco": "wiztree",
     "content": "WizTree",
@@ -8941,6 +9332,7 @@ $sync.configs.applications = @'
     "winget": "AntibodySoftware.WizTree"
   },
   "WPFInstallxdm": {
+    "foss": true,
     "category": "Utilities",
     "choco": "xdm",
     "content": "Xtreme Download Manager",
@@ -8949,6 +9341,7 @@ $sync.configs.applications = @'
     "winget": "subhra74.XtremeDownloadManager"
   },
   "WPFInstallxeheditor": {
+    "foss": false,
     "category": "Utilities",
     "choco": "HxD",
     "content": "HxD Hex Editor",
@@ -8957,6 +9350,7 @@ $sync.configs.applications = @'
     "winget": "MHNexus.HxD"
   },
   "WPFInstallxemu": {
+    "foss": true,
     "category": "Games",
     "choco": "na",
     "content": "XEMU",
@@ -8965,6 +9359,7 @@ $sync.configs.applications = @'
     "winget": "xemu-project.xemu"
   },
   "WPFInstallxnview": {
+    "foss": false,
     "category": "Utilities",
     "choco": "xnview",
     "content": "XnView classic",
@@ -8973,6 +9368,7 @@ $sync.configs.applications = @'
     "winget": "XnSoft.XnView.Classic"
   },
   "WPFInstallxournal": {
+    "foss": true,
     "category": "Document",
     "choco": "xournalplusplus",
     "content": "Xournal++",
@@ -8981,6 +9377,7 @@ $sync.configs.applications = @'
     "winget": "Xournal++.Xournal++"
   },
   "WPFInstallxpipe": {
+    "foss": true,
     "category": "Pro Tools",
     "choco": "xpipe",
     "content": "XPipe",
@@ -8989,6 +9386,7 @@ $sync.configs.applications = @'
     "winget": "xpipe-io.xpipe"
   },
   "WPFInstallyarn": {
+    "foss": true,
     "category": "Development",
     "choco": "yarn",
     "content": "Yarn",
@@ -8997,6 +9395,7 @@ $sync.configs.applications = @'
     "winget": "Yarn.Yarn"
   },
   "WPFInstallytdlp": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "yt-dlp",
     "content": "Yt-dlp",
@@ -9005,6 +9404,7 @@ $sync.configs.applications = @'
     "winget": "yt-dlp.yt-dlp"
   },
   "WPFInstallzerotierone": {
+    "foss": false,
     "category": "Utilities",
     "choco": "zerotier-one",
     "content": "ZeroTier One",
@@ -9013,6 +9413,7 @@ $sync.configs.applications = @'
     "winget": "ZeroTier.ZeroTierOne"
   },
   "WPFInstallzim": {
+    "foss": true,
     "category": "Document",
     "choco": "zim",
     "content": "Zim Desktop Wiki",
@@ -9021,6 +9422,7 @@ $sync.configs.applications = @'
     "winget": "Zimwiki.Zim"
   },
   "WPFInstallznote": {
+    "foss": true,
     "category": "Document",
     "choco": "na",
     "content": "Znote",
@@ -9029,6 +9431,7 @@ $sync.configs.applications = @'
     "winget": "alagrede.znote"
   },
   "WPFInstallzoom": {
+    "foss": false,
     "category": "Communications",
     "choco": "zoom",
     "content": "Zoom",
@@ -9037,6 +9440,7 @@ $sync.configs.applications = @'
     "winget": "Zoom.Zoom"
   },
   "WPFInstallzoomit": {
+    "foss": false,
     "category": "Utilities",
     "choco": "na",
     "content": "ZoomIt",
@@ -9045,6 +9449,7 @@ $sync.configs.applications = @'
     "winget": "Microsoft.Sysinternals.ZoomIt"
   },
   "WPFInstallzotero": {
+    "foss": true,
     "category": "Document",
     "choco": "zotero",
     "content": "Zotero",
@@ -9053,6 +9458,7 @@ $sync.configs.applications = @'
     "winget": "DigitalScholar.Zotero"
   },
   "WPFInstallzoxide": {
+    "foss": true,
     "category": "Utilities",
     "choco": "zoxide",
     "content": "Zoxide",
@@ -9061,6 +9467,7 @@ $sync.configs.applications = @'
     "winget": "ajeetdsouza.zoxide"
   },
   "WPFInstallzulip": {
+    "foss": true,
     "category": "Communications",
     "choco": "zulip",
     "content": "Zulip",
@@ -9069,6 +9476,7 @@ $sync.configs.applications = @'
     "winget": "Zulip.Zulip"
   },
   "WPFInstallsyncthingtray": {
+    "foss": true,
     "category": "Utilities",
     "choco": "syncthingtray",
     "content": "Syncthingtray",
@@ -9077,6 +9485,7 @@ $sync.configs.applications = @'
     "winget": "Martchus.syncthingtray"
   },
   "WPFInstallminiconda": {
+    "foss": false,
     "category": "Development",
     "choco": "miniconda3",
     "content": "Miniconda",
@@ -9085,6 +9494,7 @@ $sync.configs.applications = @'
     "winget": "Anaconda.Miniconda3"
   },
   "WPFInstallpixi": {
+    "foss": true,
     "category": "Development",
     "choco": "pixi",
     "content": "Pixi",
@@ -9093,6 +9503,7 @@ $sync.configs.applications = @'
     "winget": "prefix-dev.pixi"
   },
   "WPFInstalltemurin": {
+    "foss": true,
     "category": "Development",
     "choco": "temurin",
     "content": "Eclipse Temurin",
@@ -9101,6 +9512,7 @@ $sync.configs.applications = @'
     "winget": "EclipseAdoptium.Temurin.21.JDK"
   },
   "WPFInstallintelpresentmon": {
+    "foss": true,
     "category": "Utilities",
     "choco": "na",
     "content": "Intel-PresentMon",
@@ -9109,6 +9521,7 @@ $sync.configs.applications = @'
     "winget": "Intel.PresentMon.Beta"
   },
   "WPFInstallpyenvwin": {
+    "foss": true,
     "category": "Development",
     "choco": "pyenv-win",
     "content": "Python Version Manager (pyenv-win)",
@@ -9117,6 +9530,7 @@ $sync.configs.applications = @'
     "winget": "na"
   },
   "WPFInstalltightvnc": {
+    "foss": true,
     "category": "Utilities",
     "choco": "TightVNC",
     "content": "TightVNC",
@@ -9125,6 +9539,7 @@ $sync.configs.applications = @'
     "winget": "GlavSoft.TightVNC"
   },
   "WPFInstallultravnc": {
+    "foss": true,
     "category": "Utilities",
     "choco": "ultravnc",
     "content": "UltraVNC",
@@ -9133,6 +9548,7 @@ $sync.configs.applications = @'
     "winget": "uvncbvba.UltraVnc"
   },
   "WPFInstallwindowsfirewallcontrol": {
+    "foss": false,
     "category": "Utilities",
     "choco": "windowsfirewallcontrol",
     "content": "Windows Firewall Control",
@@ -9141,6 +9557,7 @@ $sync.configs.applications = @'
     "winget": "BiniSoft.WindowsFirewallControl"
   },
   "WPFInstallvistaswitcher": {
+    "foss": false,
     "category": "Utilities",
     "choco": "na",
     "content": "VistaSwitcher",
@@ -9149,6 +9566,7 @@ $sync.configs.applications = @'
     "winget": "ntwind.VistaSwitcher"
   },
   "WPFInstallautodarkmode": {
+    "foss": true,
     "category": "Utilities",
     "choco": "auto-dark-mode",
     "content": "Windows Auto Dark Mode",
@@ -9157,6 +9575,7 @@ $sync.configs.applications = @'
     "winget": "Armin2208.WindowsAutoNightMode"
   },
   "WPFInstallAmbieWhiteNoise": {
+    "foss": true,
     "category": "Utilities",
     "choco": "na",
     "content": "Ambie White Noise",
@@ -9166,6 +9585,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallLua": {
+    "foss": true,
     "category": "Development",
     "choco": "lua",
     "content": "Lua",
@@ -9174,6 +9594,7 @@ $sync.configs.applications = @'
     "winget": "rjpcomputing.luaforwindows"
   },
   "WPFInstallmagicwormhole": {
+    "foss": true,
     "category": "Utilities",
     "choco": "magic-wormhole",
     "content": "Magic Wormhole",
@@ -9182,6 +9603,7 @@ $sync.configs.applications = @'
     "winget": "magic-wormhole.magic-wormhole"
   },
   "WPFInstallcroc": {
+    "foss": true,
     "category": "Utilities",
     "choco": "croc",
     "content": "croc",
@@ -9190,6 +9612,7 @@ $sync.configs.applications = @'
     "winget": "schollz.croc"
   },
   "WPFInstallqgis": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "qgis",
     "content": "QGIS",
@@ -9198,6 +9621,7 @@ $sync.configs.applications = @'
     "winget": "OSGeo.QGIS"
   },
   "WPFInstallsmplayer": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "smplayer",
     "content": "SMPlayer",
@@ -9206,6 +9630,7 @@ $sync.configs.applications = @'
     "winget": "SMPlayer.SMPlayer"
   },
   "WPFInstallglazewm": {
+    "foss": true,
     "category": "Utilities",
     "choco": "na",
     "content": "GlazeWM",
@@ -9214,6 +9639,7 @@ $sync.configs.applications = @'
     "winget": "glzr-io.glazewm"
   },
   "WPFInstallfancontrol": {
+    "foss": false,
     "category": "Utilities",
     "choco": "na",
     "content": "FanControl",
@@ -9222,6 +9648,7 @@ $sync.configs.applications = @'
     "winget": "Rem0o.FanControl"
   },
   "WPFInstallfnm": {
+    "foss": true,
     "category": "Development",
     "choco": "fnm",
     "content": "Fast Node Manager",
@@ -9231,6 +9658,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallwhatsapp": {
+    "foss": false,
     "category": "Communications",
     "choco": "na",
     "content": "WhatsApp Desktop",
@@ -9239,6 +9667,7 @@ $sync.configs.applications = @'
     "winget": "msstore:9NKSQGP7F2NH"
   },
   "WPFInstallWindhawk": {
+    "foss": true,
     "category": "Utilities",
     "choco": "windhawk",
     "content": "Windhawk",
@@ -9247,6 +9676,7 @@ $sync.configs.applications = @'
     "winget": "RamenSoftware.Windhawk"
   },
   "WPFInstallForceAutoHDR": {
+    "foss": true,
     "category": "Utilities",
     "choco": "na",
     "content": "ForceAutoHDR",
@@ -9255,6 +9685,7 @@ $sync.configs.applications = @'
     "winget": "ForceAutoHDR.7gxycn08"
   },
   "WPFInstallJoyToKey": {
+    "foss": false,
     "category": "Utilities",
     "choco": "joytokey",
     "content": "JoyToKey",
@@ -9263,6 +9694,7 @@ $sync.configs.applications = @'
     "winget": "JTKsoftware.JoyToKey"
   },
   "WPFInstallnditools": {
+    "foss": false,
     "category": "Multimedia Tools",
     "choco": "na",
     "content": "NDI Tools",
@@ -9272,6 +9704,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstallkeepassxc": {
+    "foss": true,
     "category": "Utilities",
     "choco": "keepassxc",
     "content": "KeePassXC",
@@ -9280,6 +9713,7 @@ $sync.configs.applications = @'
     "winget": "KeePassXCTeam.KeePassXC"
   },
   "WPFInstallkicad": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "na",
     "content": "Kicad",
@@ -9289,6 +9723,7 @@ $sync.configs.applications = @'
   },
 
   "WPFInstalldropbox": {
+    "foss": false,
     "category": "Utilities",
     "choco": "dropbox",
     "content": "Dropbox",
@@ -9297,6 +9732,7 @@ $sync.configs.applications = @'
     "winget": "Dropbox.Dropbox"
   },
   "WPFInstalldropox": {
+    "foss": false,
     "category": "Utilities",
     "choco": "na",
     "content": "Dropbox",
@@ -9305,6 +9741,7 @@ $sync.configs.applications = @'
     "winget": "Dropbox.Dropbox"
   },
   "WPFInstallOFGB": {
+    "foss": true,
     "category": "Utilities",
     "choco": "ofgb",
     "content": "OFGB (Oh Frick Go Back)",
@@ -9313,6 +9750,7 @@ $sync.configs.applications = @'
     "winget": "xM4ddy.OFGB"
   },
   "WPFInstallPaleMoon": {
+    "foss": true,
     "category": "Browsers",
     "choco": "paleMoon",
     "content": "PaleMoon",
@@ -9321,6 +9759,7 @@ $sync.configs.applications = @'
     "winget": "MoonchildProductions.PaleMoon"
   },
   "WPFInstallShotcut": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "na",
     "content": "Shotcut",
@@ -9329,6 +9768,7 @@ $sync.configs.applications = @'
     "winget": "Meltytech.Shotcut"
   },
   "WPFInstallLenovoLegionToolkit": {
+    "foss": true,
     "category": "Utilities",
     "choco": "na",
     "content": "Lenovo Legion Toolkit",
@@ -9337,6 +9777,7 @@ $sync.configs.applications = @'
     "winget": "BartoszCichecki.LenovoLegionToolkit"
   },
   "WPFInstallPulsarEdit": {
+    "foss": true,
     "category": "Development",
     "choco": "pulsar",
     "content": "Pulsar",
@@ -9345,6 +9786,7 @@ $sync.configs.applications = @'
     "winget": "Pulsar-Edit.Pulsar"
   },
   "WPFInstallAegisub": {
+    "foss": true,
     "category": "Development",
     "choco": "aegisub",
     "content": "Aegisub",
@@ -9353,6 +9795,7 @@ $sync.configs.applications = @'
     "winget": "Aegisub.Aegisub"
   },
   "WPFInstallSubtitleEdit": {
+    "foss": true,
     "category": "Multimedia Tools",
     "choco": "na",
     "content": "Subtitle Edit",
@@ -9361,6 +9804,7 @@ $sync.configs.applications = @'
     "winget": "Nikse.SubtitleEdit"
   },
   "WPFInstallFork": {
+    "foss": false,
     "category": "Development",
     "choco": "git-fork",
     "content": "Fork",
@@ -9369,6 +9813,7 @@ $sync.configs.applications = @'
     "winget": "Fork.Fork"
   },
   "WPFInstallZenBrowser": {
+    "foss": true,
     "category": "Browsers",
     "choco": "na",
     "content": "Zen Browser",
@@ -9377,6 +9822,7 @@ $sync.configs.applications = @'
     "winget": "Zen-Team.Zen-Browser"
   },
   "WPFInstallZed": {
+    "foss": true,
     "category": "Development",
     "choco": "zed",
     "content": "Zed",
@@ -9462,6 +9908,14 @@ $sync.configs.appnavigation = @'
     "Type": "Button",
     "Order": "5",
     "Description": "Collapse every application category"
+  },
+
+  "WPFInstallFOSSInfo": {
+    "Content": "Showing: All Applications",
+    "Category": "__Selection",
+    "Type": "Button",
+    "Order": "6",
+    "Description": "Limit the list to open source applications"
   }
 }
 '@ | ConvertFrom-Json
