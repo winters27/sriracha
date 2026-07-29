@@ -90,16 +90,16 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
         $script = "&([ScriptBlock]::Create((irm https://raw.githubusercontent.com/winters27/sriracha/main/srirachatool.ps1))) $($argList -join ' ')"
     }
 
-    $powershellCmd = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
-    $processCmd = if (Get-Command wt.exe -ErrorAction SilentlyContinue) { "wt.exe" } else { "$powershellCmd" }
+    # Launch the interpreter directly rather than through Windows Terminal. wt.exe treats
+    # ";" as its own command separator, so it splits the relaunch command in half and
+    # tries to run the remainder as a separate executable, failing with 0x80070002.
+    # Full path because wt.exe is not the only WindowsApps alias that confuses elevation.
+    $powershellCmd = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
+    if (-not $powershellCmd) { $powershellCmd = (Get-Command powershell -ErrorAction SilentlyContinue).Source }
+    if (-not $powershellCmd) { $powershellCmd = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" }
 
     try {
-        if ($processCmd -eq "wt.exe") {
-            Start-Process $processCmd -ArgumentList "$powershellCmd -ExecutionPolicy Bypass -NoProfile -Command `"$script`"" -Verb RunAs -ErrorAction Stop
-        }
-        else {
-            Start-Process $processCmd -ArgumentList "-ExecutionPolicy Bypass -NoProfile -Command `"$script`"" -Verb RunAs -ErrorAction Stop
-        }
+        Start-Process -FilePath $powershellCmd -ArgumentList "-ExecutionPolicy Bypass -NoProfile -Command `"$script`"" -Verb RunAs -ErrorAction Stop
     }
     catch {
         # UAC declined or the launch failed, so do not leave the staged copy behind.
