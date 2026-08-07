@@ -306,12 +306,14 @@ function Add-SrirachaToolIconRequest {
     <#
 
     .SYNOPSIS
-        Loads an app icon from the local cache, or queues it to be fetched in the background.
+        Shows an app's brand icon, from the local cache when possible.
 
     .DESCRIPTION
-        Cached icons load straight off disk so the Apps tab never waits on the network.
-        Anything missing is queued and downloaded once by a single background worker,
-        which writes it to the cache and then fills in the image on the UI thread.
+        A cached icon is read straight off disk, so a warm cache costs no network at all
+        and works offline. A miss is handed to WPF as a remote source, which downloads
+        images in parallel on its own threads; the result is then written to the cache so
+        the next launch is instant. Failures are silent by design: the styled first letter
+        is already on screen underneath, so a missing icon degrades instead of breaking.
 
     #>
 
@@ -329,7 +331,7 @@ function Add-SrirachaToolIconRequest {
         try {
             $bitmap = New-Object Windows.Media.Imaging.BitmapImage
             $bitmap.BeginInit()
-            # OnLoad reads the bytes immediately and releases the file, so the cache stays writable
+            # OnLoad reads the bytes now and releases the handle, so the cache stays writable
             $bitmap.CacheOption = [Windows.Media.Imaging.BitmapCacheOption]::OnLoad
             $bitmap.UriSource = [uri]$cachePath
             $bitmap.EndInit()
@@ -339,85 +341,53 @@ function Add-SrirachaToolIconRequest {
             return
         }
         catch {
-            # A truncated or corrupt cache file should not kill the entry; refetch it
+            # A truncated or corrupt cache entry should not break the card; refetch it
             Remove-Item $cachePath -Force -ErrorAction SilentlyContinue
         }
     }
 
-    $null = $sync.IconQueue.Add([PSCustomObject]@{
-            Image     = $Image
-            Fallback  = $Fallback
-            CachePath = $cachePath
-            Url       = $source.Url
-        })
-}
-function Start-SrirachaToolIconFetch {
-    <#
+    try {
+        $bitmap = New-Object Windows.Media.Imaging.BitmapImage
+        $bitmap.BeginInit()
+        $bitmap.UriSource = [uri]$source.Url
+        # Deliberately no OnLoad here: that would force a synchronous download and
+        # stall the UI thread once per app
+        $bitmap.EndInit()
 
-    .SYNOPSIS
-        Drains the queued icon requests on a background thread, one shared worker for the whole tab.
+        # Carry the destination on the bitmap so the completion handler knows where to write
+        $bitmap | Add-Member -NotePropertyName CacheTarget -NotePropertyValue $cachePath -Force
+        $bitmap | Add-Member -NotePropertyName IconImage -NotePropertyValue $Image -Force
+        $bitmap | Add-Member -NotePropertyName IconFallback -NotePropertyValue $Fallback -Force
 
-    #>
+        $bitmap.Add_DownloadCompleted({
+                $downloaded = $args[0]
+                try {
+                    $downloaded.IconImage.Visibility = "Visible"
+                    $downloaded.IconFallback.Visibility = "Collapsed"
 
-    if (-not $sync.IconQueue -or $sync.IconQueue.Count -eq 0) { return }
-    if ($sync.IconFetchRunning) { return }
-    $sync.IconFetchRunning = $true
+                    $cacheDir = Split-Path $downloaded.CacheTarget -Parent
+                    if (-not (Test-Path $cacheDir)) { $null = New-Item -Path $cacheDir -ItemType Directory -Force }
 
-    $requests = @($sync.IconQueue)
-    $sync.IconQueue = [System.Collections.ArrayList]::Synchronized([System.Collections.ArrayList]::new())
-
-    Invoke-WPFRunspace -ParameterList @(, ("requests", $requests)) -ScriptBlock {
-        param($requests)
-
-        $cacheDir = "$env:LOCALAPPDATA\srirachatool\icons"
-        if (-not (Test-Path $cacheDir)) { $null = New-Item -Path $cacheDir -ItemType Directory -Force }
-
-        # One file per host, so collapse duplicates before hitting the network
-        $byPath = @{}
-        foreach ($request in $requests) {
-            if (-not $byPath.ContainsKey($request.CachePath)) { $byPath[$request.CachePath] = @() }
-            $byPath[$request.CachePath] += $request
-        }
-
-        foreach ($cachePath in $byPath.Keys) {
-            $group = $byPath[$cachePath]
-            try {
-                if (-not (Test-Path $cachePath)) {
-                    Invoke-WebRequest -Uri $group[0].Url -OutFile $cachePath -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
+                    # Re-encoding normalises whatever the source served into a PNG we can always read back
+                    $encoder = New-Object Windows.Media.Imaging.PngBitmapEncoder
+                    $encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($downloaded))
+                    $stream = [System.IO.File]::Open($downloaded.CacheTarget, 'Create')
+                    try { $encoder.Save($stream) } finally { $stream.Close() }
                 }
-
-                if ((Get-Item $cachePath -ErrorAction Stop).Length -lt 64) {
-                    # Too small to be a real icon; keep the letter fallback instead
-                    Remove-Item $cachePath -Force -ErrorAction SilentlyContinue
-                    continue
+                catch {
+                    Write-Debug "Unable to cache icon: $($_.Exception.Message)"
                 }
+            })
 
-                foreach ($request in $group) {
-                    $sync.Form.Dispatcher.Invoke([action] {
-                            try {
-                                $bitmap = New-Object Windows.Media.Imaging.BitmapImage
-                                $bitmap.BeginInit()
-                                $bitmap.CacheOption = [Windows.Media.Imaging.BitmapCacheOption]::OnLoad
-                                $bitmap.UriSource = [uri]$request.CachePath
-                                $bitmap.EndInit()
-                                $request.Image.Source = $bitmap
-                                $request.Image.Visibility = "Visible"
-                                $request.Fallback.Visibility = "Collapsed"
-                            }
-                            catch {
-                                Write-Debug "Unable to apply icon: $($_.Exception.Message)"
-                            }
-                        })
-                }
-            }
-            catch {
-                # Offline, blocked, or no favicon: the letter fallback is already on screen
-                Remove-Item $cachePath -Force -ErrorAction SilentlyContinue
-                Write-Debug "Icon fetch failed for $($group[0].Url): $($_.Exception.Message)"
-            }
-        }
+        $bitmap.Add_DownloadFailed({
+                # Keep the letter fallback; nothing else to do
+                $args[0].IconImage.Visibility = "Collapsed"
+            })
 
-        $sync.IconFetchRunning = $false
+        $Image.Source = $bitmap
+    }
+    catch {
+        Write-Debug "Unable to request icon for $Link : $($_.Exception.Message)"
     }
 }
 function Get-SrirachaToolWindowStatePath {
@@ -5490,9 +5460,6 @@ function Invoke-WPFUIElements {
         # Get the CategoryExpanderStyle
         $categoryExpanderStyle = $window.FindResource("CategoryExpanderStyle")
         $appCardStyle = $window.FindResource("AppCardStyle")
-        if (-not $sync.IconQueue) {
-            $sync.IconQueue = [System.Collections.ArrayList]::Synchronized([System.Collections.ArrayList]::new())
-        }
         
         # Create a WrapPanel that stretches to fill parent width
         $categoryGrid = New-Object Windows.Controls.WrapPanel
@@ -5663,8 +5630,6 @@ function Invoke-WPFUIElements {
                 }
                 
                 $expander.Content = $wrapPanel
-                # Icons are only worth fetching once a category is actually opened
-                $expander.Add_Expanded({ Start-SrirachaToolIconFetch })
                 $categoryGrid.Children.Add($expander) | Out-Null
                 
                 # Register category expander to sync for search visibility
