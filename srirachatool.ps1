@@ -300,10 +300,15 @@ function Set-SrirachaToolScanState {
         [int]$Found = -1
     )
 
+    # MUST be called on the UI thread. Callers in a runspace already wrap this in
+    # $sync.form.Dispatcher.Invoke. Do not add a Dispatcher.Invoke in here: a blocking
+    # Invoke issued from a worker deadlocks, because the UI thread needs that worker's
+    # runspace to execute the scriptblock and the worker is busy waiting on the Invoke.
+    $form = $sync.Form
     $button = $sync.WPFGetInstalled
     $label = $sync.WPFGetInstalledLabel
     $icon = $sync.WPFGetInstalledIcon
-    if (-not $button -or -not $label -or -not $icon) { return }
+    if (-not $form -or -not $button -or -not $label -or -not $icon) { return }
 
     if ($Scanning) {
         $button.IsEnabled = $false
@@ -325,14 +330,18 @@ function Set-SrirachaToolScanState {
 
     if ($Found -ge 0) {
         $label.Text = "Found $Found installed"
-        # Settle back to the resting label so the button does not read as a status field
-        $revert = New-Object Windows.Threading.DispatcherTimer
+
+        # Bind the timer to the form's dispatcher explicitly. The parameterless constructor
+        # binds to whichever thread constructs it, which put the tick on a worker thread and
+        # threw "The calling thread cannot access this object" when it set the label.
+        $revert = New-Object Windows.Threading.DispatcherTimer([Windows.Threading.DispatcherPriority]::Normal, $form.Dispatcher)
         $revert.Interval = [TimeSpan]::FromSeconds(4)
         $revert.Add_Tick({
-                $this.Stop()
+                $args[0].Stop()
                 if ($sync.WPFGetInstalledLabel) { $sync.WPFGetInstalledLabel.Text = "Find Installed Apps" }
             })
         $revert.Start()
+        $sync.ScanRevertTimer = $revert
     }
     else {
         $label.Text = "Find Installed Apps"
