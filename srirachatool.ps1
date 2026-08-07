@@ -6603,7 +6603,7 @@ $sync.configs.applications = @'
   "WPFInstalldismtools": {
     "foss": true,
     "category": "Microsoft Tools",
-    "choco": "na",
+    "choco": "dismtools",
     "content": "DISMTools",
     "description": "DISMTools is a fast, customizable GUI for the DISM utility, supporting Windows images from Windows 7 onward. It handles installations on any drive, offers project support, and lets users tweak settings like color modes, language, and DISM versions; powered by both native DISM and a managed DISM API.",
     "link": "https://github.com/CodingWonders/DISMTools",
@@ -6870,7 +6870,7 @@ $sync.configs.applications = @'
     "content": "Files",
     "description": "Alternative file explorer.",
     "link": "https://github.com/files-community/Files",
-    "winget": "na"
+    "winget": "FilesCommunity.Files"
   },
   "WPFInstallfirealpaca": {
     "foss": false,
@@ -6920,7 +6920,7 @@ $sync.configs.applications = @'
   "WPFInstallfloorp": {
     "foss": true,
     "category": "Browsers",
-    "choco": "na",
+    "choco": "floorp",
     "content": "Floorp",
     "description": "Floorp is an open-source web browser project that aims to provide a simple and fast browsing experience.",
     "link": "https://floorp.app/",
@@ -7209,7 +7209,7 @@ $sync.configs.applications = @'
   "WPFInstallheroiclauncher": {
     "foss": true,
     "category": "Games",
-    "choco": "na",
+    "choco": "heroic-games-launcher",
     "content": "Heroic Games Launcher",
     "description": "Heroic Games Launcher is an open-source alternative game launcher for Epic Games Store.",
     "link": "https://heroicgameslauncher.com/",
@@ -7835,7 +7835,7 @@ $sync.configs.applications = @'
     "content": "NetBird",
     "description": "NetBird is a Open Source alternative comparable to TailScale that can be connected to a selfhosted Server.",
     "link": "https://netbird.io/",
-    "winget": "netbird"
+    "winget": "Netbird.Netbird"
   },
   "WPFInstallnaps2": {
     "foss": true,
@@ -8398,7 +8398,7 @@ $sync.configs.applications = @'
     "content": "Python3",
     "description": "Python is a versatile programming language used for web development, data analysis, artificial intelligence, and more.",
     "link": "https://www.python.org/",
-    "winget": "Python.Python.3.13"
+    "winget": "Python.Python.3.14"
   },
   "WPFInstallqbittorrent": {
     "foss": true,
@@ -8765,11 +8765,20 @@ $sync.configs.applications = @'
   "WPFInstallpdfgear": {
     "foss": false,
     "category": "Document",
-    "choco": "na",
+    "choco": "pdfgear",
     "content": "PDFgear",
     "description": "PDFgear is a piece of full-featured PDF management software for Windows, Mac, and mobile, and it's completely free to use.",
     "link": "https://www.pdfgear.com/",
     "winget": "PDFgear.PDFgear"
+  },
+  "WPFInstallpdfxchange": {
+    "foss": false,
+    "category": "Document",
+    "choco": "pdfxchangeeditor",
+    "content": "PDF-XChange Editor",
+    "description": "A comprehensive Windows-based software suite and editor for creating, viewing, editing, annotating, and signing PDF files.",
+    "link": "https://www.pdf-xchange.com/",
+    "winget": "TrackerSoftware.PDF-XChangeEditor"
   },
   "WPFInstallsunshine": {
     "foss": true,
@@ -8880,6 +8889,15 @@ $sync.configs.applications = @'
     "description": "TEAMSPEAK. YOUR TEAM. YOUR RULES. Use crystal clear sound to communicate with your teammates cross-platform with military-grade security, lag-free performance & unparalleled reliability and uptime.",
     "link": "https://www.teamspeak.com/",
     "winget": "TeamSpeakSystems.TeamSpeakClient"
+  },
+  "WPFInstallteamspeak6": {
+    "foss": false,
+    "category": "Communications",
+    "choco": "na",
+    "content": "TeamSpeak 6",
+    "description": "TEAMSPEAK. YOUR TEAM. YOUR RULES. Use crystal clear sound to communicate with your teammates cross-platform with military-grade security, lag-free performance & unparalleled reliability and uptime.",
+    "link": "https://www.teamspeak.com/",
+    "winget": "TeamSpeakSystems.TeamSpeakClient.Beta.6"
   },
   "WPFInstallteamviewer": {
     "foss": false,
@@ -9005,7 +9023,7 @@ $sync.configs.applications = @'
     "content": "TranslucentTB",
     "description": "TranslucentTB is a tool that allows you to customize the transparency of the Windows taskbar.",
     "link": "https://github.com/TranslucentTB/TranslucentTB",
-    "winget": "9PF4KZ2VN4W9"
+    "winget": "CharlesMilette.TranslucentTB"
   },
   "WPFInstalltwinkletray": {
     "foss": true,
@@ -9065,7 +9083,7 @@ $sync.configs.applications = @'
   "WPFInstallvc2015_32": {
     "foss": false,
     "category": "Microsoft Tools",
-    "choco": "na",
+    "choco": "vcredist2015",
     "content": "Visual C++ 2015-2022 32-bit",
     "description": "Visual C++ 2015-2022 32-bit redistributable package installs runtime components of Visual C++ libraries required to run 32-bit applications.",
     "link": "https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads",
@@ -9074,7 +9092,7 @@ $sync.configs.applications = @'
   "WPFInstallvc2015_64": {
     "foss": false,
     "category": "Microsoft Tools",
-    "choco": "na",
+    "choco": "vcredist2015",
     "content": "Visual C++ 2015-2022 64-bit",
     "description": "Visual C++ 2015-2022 64-bit redistributable package installs runtime components of Visual C++ libraries required to run 64-bit applications.",
     "link": "https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads",
@@ -9260,7 +9278,7 @@ $sync.configs.applications = @'
     "content": "UniGetUI",
     "description": "UniGetUI is a GUI for Winget, Chocolatey, and other Windows CLI package managers.",
     "link": "https://www.marticliment.com/wingetui/",
-    "winget": "MartiCliment.UniGetUI"
+    "winget": "Devolutions.UniGetUI"
   },
   "WPFInstallwinmerge": {
     "foss": true,
@@ -9653,7 +9671,7 @@ $sync.configs.applications = @'
   "WPFInstallglazewm": {
     "foss": true,
     "category": "Utilities",
-    "choco": "na",
+    "choco": "glazewm",
     "content": "GlazeWM",
     "description": "GlazeWM is a tiling window manager for Windows inspired by i3 and Polybar",
     "link": "https://github.com/glzr-io/glazewm",
@@ -9836,7 +9854,7 @@ $sync.configs.applications = @'
   "WPFInstallZenBrowser": {
     "foss": true,
     "category": "Browsers",
-    "choco": "na",
+    "choco": "zen-browser",
     "content": "Zen Browser",
     "description": "The modern, privacy-focused, performance-driven browser built on Firefox",
     "link": "https://zen-browser.app/",
