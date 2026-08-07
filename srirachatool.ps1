@@ -3194,53 +3194,58 @@ Function Uninstall-SrirachaToolEdgeBrowser {
     function Uninstall-EdgeClient {
         param (
             [Parameter(Mandatory = $true)]
-            [string]$Key
+            [string]$Key,
+            [string]$Mode = "Edge"
         )
 
-        $originalNation = [microsoft.win32.registry]::GetValue('HKEY_USERS\.DEFAULT\Control Panel\International\Geo', 'Nation', [Microsoft.Win32.RegistryValueKind]::String)
+        $originalNation = [microsoft.win32.registry]::GetValue('HKEY_USERS\.DEFAULT\Control Panel\International\Geo', 'Nation', $null)
 
-        # Set Nation to any of the EEA regions temporarily
-        # Refer: https://learn.microsoft.com/en-us/windows/win32/intl/table-of-geographical-locations
-        $tmpNation = 68 # Ireland
-        [microsoft.win32.registry]::SetValue('HKEY_USERS\.DEFAULT\Control Panel\International\Geo', 'Nation', $tmpNation, [Microsoft.Win32.RegistryValueKind]::String) | Out-Null
+        try {
+            # Set Nation to any of the EEA regions temporarily
+            # Refer: https://learn.microsoft.com/en-us/windows/win32/intl/table-of-geographical-locations
+            $tmpNation = 68 # Ireland
+            [microsoft.win32.registry]::SetValue('HKEY_USERS\.DEFAULT\Control Panel\International\Geo', 'Nation', $tmpNation, [Microsoft.Win32.RegistryValueKind]::String) | Out-Null
 
-        $baseKey = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate'
-        $registryPath = $baseKey + '\ClientState\' + $Key
+            $baseKey = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate'
+            $registryPath = $baseKey + '\ClientState\' + $Key
 
-        if (!(Test-Path -Path $registryPath)) {
-            Write-Host "[$Mode] Registry key not found: $registryPath"
-            return
+            if (!(Test-Path -Path $registryPath)) {
+                Write-Host "[$Mode] Registry key not found: $registryPath"
+                return
+            }
+
+            # Remove the status flag
+            Remove-ItemProperty -Path $baseKey -Name "IsEdgeStableUninstalled" -ErrorAction SilentlyContinue | Out-Null
+
+            Remove-ItemProperty -Path $registryPath -Name "experiment_control_labels" -ErrorAction SilentlyContinue | Out-Null
+
+            $uninstallString = (Get-ItemProperty -Path $registryPath).UninstallString
+            $uninstallArguments = (Get-ItemProperty -Path $registryPath).UninstallArguments
+
+            if ([string]::IsNullOrEmpty($uninstallString) -or [string]::IsNullOrEmpty($uninstallArguments)) {
+                Write-Host "[$Mode] Cannot find uninstall methods for $Mode"
+                return
+            }
+
+            # Extra arguments to nuke it
+            $uninstallArguments += " --force-uninstall --delete-profile"
+
+            if (!(Test-Path -Path $uninstallString)) {
+                Write-Host "[$Mode] setup.exe not found at: $uninstallString"
+                return
+            }
+            Start-Process -FilePath $uninstallString -ArgumentList $uninstallArguments -Wait -NoNewWindow -Verbose
+
+            # might not exist in some cases
+            if ((Get-ItemProperty -Path $baseKey).IsEdgeStableUninstalled -eq 1) {
+                Write-Host "[$Mode] Edge Stable has been successfully uninstalled"
+            }
         }
-
-        # Remove the status flag
-        Remove-ItemProperty -Path $baseKey -Name "IsEdgeStableUninstalled" -ErrorAction SilentlyContinue | Out-Null
-
-        Remove-ItemProperty -Path $registryPath -Name "experiment_control_labels" -ErrorAction SilentlyContinue | Out-Null
-
-        $uninstallString = (Get-ItemProperty -Path $registryPath).UninstallString
-        $uninstallArguments = (Get-ItemProperty -Path $registryPath).UninstallArguments
-
-        if ([string]::IsNullOrEmpty($uninstallString) -or [string]::IsNullOrEmpty($uninstallArguments)) {
-            Write-Host "[$Mode] Cannot find uninstall methods for $Mode"
-            return
-        }
-
-        # Extra arguments to nuke it
-        $uninstallArguments += " --force-uninstall --delete-profile"
-
-        # $uninstallCommand = "`"$uninstallString`"" + $uninstallArguments
-        if (!(Test-Path -Path $uninstallString)) {
-            Write-Host "[$Mode] setup.exe not found at: $uninstallString"
-            return
-        }
-        Start-Process -FilePath $uninstallString -ArgumentList $uninstallArguments -Wait -NoNewWindow -Verbose
-
-        # Restore Nation back to the original
-        [microsoft.win32.registry]::SetValue('HKEY_USERS\.DEFAULT\Control Panel\International\Geo', 'Nation', $originalNation, [Microsoft.Win32.RegistryValueKind]::String) | Out-Null
-
-        # might not exist in some cases
-        if ((Get-ItemProperty -Path $baseKey).IsEdgeStableUninstalled -eq 1) {
-            Write-Host "[$Mode] Edge Stable has been successfully uninstalled"
+        finally {
+            # Restore Nation even when bailing out early; a leaked EEA region changes system behavior
+            if ($null -ne $originalNation) {
+                [microsoft.win32.registry]::SetValue('HKEY_USERS\.DEFAULT\Control Panel\International\Geo', 'Nation', $originalNation, [Microsoft.Win32.RegistryValueKind]::String) | Out-Null
+            }
         }
     }
 
@@ -3249,11 +3254,11 @@ Function Uninstall-SrirachaToolEdgeBrowser {
 
         [microsoft.win32.registry]::SetValue("HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdateDev", "AllowUninstall", 1, [Microsoft.Win32.RegistryValueKind]::DWord) | Out-Null
 
-        Uninstall-EdgeClient -Key '{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}'
+        Uninstall-EdgeClient -Key '{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}' -Mode "Edge"
 
-        Remove-Item -Path "Computer\\HKEY_CLASSES_ROOT\\MSEdgePDF" -ErrorAction SilentlyContinue | Out-Null
-        Remove-Item -Path "Computer\\HKEY_CLASSES_ROOT\\MSEdgeHTM" -ErrorAction SilentlyContinue | Out-Null
-        Remove-Item -Path "Computer\\HKEY_CLASSES_ROOT\\MSEdgeMHT" -ErrorAction SilentlyContinue | Out-Null
+        Remove-Item -Path "Registry::HKEY_CLASSES_ROOT\MSEdgePDF" -Recurse -ErrorAction SilentlyContinue | Out-Null
+        Remove-Item -Path "Registry::HKEY_CLASSES_ROOT\MSEdgeHTM" -Recurse -ErrorAction SilentlyContinue | Out-Null
+        Remove-Item -Path "Registry::HKEY_CLASSES_ROOT\MSEdgeMHT" -Recurse -ErrorAction SilentlyContinue | Out-Null
 
         # Remove Edge Polocy reg keys
         Remove-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Edge" -Recurse -ErrorAction SilentlyContinue | Out-Null
@@ -3267,7 +3272,7 @@ Function Uninstall-SrirachaToolEdgeBrowser {
 
         Remove-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft EdgeWebView" -Name "NoRemove" -ErrorAction SilentlyContinue | Out-Null
 
-        Uninstall-EdgeClient -Key '{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+        Uninstall-EdgeClient -Key '{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}' -Mode "WebView"
     }
 
     function Uninstall-EdgeUpdate {
@@ -3283,7 +3288,7 @@ Function Uninstall-SrirachaToolEdgeBrowser {
         $uninstallCmdLine = (Get-ItemProperty -Path $registryPath).UninstallCmdLine
 
         if ([string]::IsNullOrEmpty($uninstallCmdLine)) {
-            Write-Host "Cannot find uninstall methods for $Mode"
+            Write-Host "Cannot find uninstall methods for EdgeUpdate"
             return
         }
 
