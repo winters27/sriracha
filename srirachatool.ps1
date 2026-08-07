@@ -10821,9 +10821,16 @@ $sync.configs.tweaks = @'
       },
       {
         "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
-        "Name": "CryptoWalletEnabled",
+        "Name": "DefaultBrowserSettingsCampaignEnabled",
         "Type": "DWord",
         "Value": "0",
+        "OriginalValue": "<RemoveEntry>"
+      },
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge\\ExtensionInstallBlocklist",
+        "Name": "1",
+        "Type": "String",
+        "Value": "ofefcgjbeghpigppfmkologfjadafddi",
         "OriginalValue": "<RemoveEntry>"
       },
       {
@@ -11341,17 +11348,17 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksRemoveEdge": {
     "Content": "Remove Microsoft Edge",
-    "Description": "Removes MS Edge when it gets reinstalled by updates. Credit: Psyirius",
+    "Description": "Uninstalls Microsoft Edge by creating a dummy MicrosoftEdge.exe in the legacy Edge folder, which unlocks the official uninstaller for a system-level removal.",
     "category": "z__Advanced Tweaks - CAUTION",
     "panel": "1",
     "Order": "a029_",
     "InvokeScript": [
-      "Uninstall-SrirachaToolEdgeBrowser -action \"Uninstall\""
+      "\r\n      $Path = Resolve-Path -Path \"$Env:ProgramFiles (x86)\\Microsoft\\Edge\\Application\\*\\Installer\\setup.exe\" -ErrorAction SilentlyContinue | Select-Object -Last 1\r\n\r\n      if ($Path -and (Test-Path $Path)) {\r\n          New-Item -Path \"$Env:SystemRoot\\SystemApps\\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\\MicrosoftEdge.exe\" -Force\r\n          Start-Process -FilePath $Path -ArgumentList \"--uninstall --system-level --force-uninstall --delete-profile\" -Wait\r\n          Write-Host \"Microsoft Edge was removed\"\r\n      } else {\r\n          Write-Host \"Microsoft Edge is not installed\"\r\n      }\r\n      "
     ],
     "UndoScript": [
-      "Uninstall-SrirachaToolEdgeBrowser -action \"Install\""
+      "\r\n      Write-Host \"Installing Microsoft Edge...\"\r\n      winget install Microsoft.Edge --source winget\r\n      "
     ],
-    "link": "https://christitustech.github.io/winutil/dev/tweaks/z--Advanced-Tweaks---CAUTION/RemoveEdge"
+    "link": "https://winutil.christitus.com/code-reference/tweaks/z--advanced-tweaks---caution/removeedge"
   },
   "WPFTweaksWindowsAI": {
     "Content": "Disable and Remove Windows AI",
