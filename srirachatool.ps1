@@ -338,6 +338,43 @@ function Set-SrirachaToolScanState {
         $label.Text = "Find Installed Apps"
     }
 }
+function Get-SrirachaToolCategoryBlurb {
+    <#
+
+    .SYNOPSIS
+        One sentence describing what a tweak category does and when it takes effect.
+
+    .DESCRIPTION
+        The Tweaks tab mixes two interaction models: the toggles under Customize Preferences
+        act the moment you flip them, while everything else waits for Apply Tweaks. Nothing
+        on screen said so, and per-tweak descriptions are hover-only, so the page read as a
+        wall of bare labels. Returns $null for anything unrecognised.
+
+    #>
+
+    param (
+        [string]$Category
+    )
+
+    switch -Wildcard ($Category) {
+        "Essential Tweaks" {
+            return "Safe, widely recommended changes. Tick what you want, then press Apply Tweaks."
+        }
+        "*Advanced Tweaks*" {
+            return "Powerful changes that can break things or remove Windows features. Read each description before ticking, then press Apply Tweaks."
+        }
+        "Remove Built-in Apps" {
+            return "Ticking an app REMOVES it from Windows when you press Apply Tweaks. Every app here can be reinstalled later from the Microsoft Store."
+        }
+        "Customize Preferences" {
+            return "Appearance and behavior switches. These apply the moment you flip them, with no Apply Tweaks needed."
+        }
+        "Performance Plans" {
+            return "Adds or removes Windows power plans. Use the buttons directly."
+        }
+        default { return $null }
+    }
+}
 function Set-SrirachaToolAppsColumns {
     <#
 
@@ -5872,6 +5909,20 @@ function Invoke-WPFUIElements {
                 if ($categoryLabelStyle) { $label.Style = $categoryLabelStyle }
                 $stackPanel.Children.Add($label) | Out-Null
 
+                # A one-line explainer under the heading. The per-tweak descriptions are
+                # tooltips, so without this the page is just a wall of bare labels, and
+                # nothing told you which groups apply instantly versus on Apply Tweaks.
+                $categoryBlurb = Get-SrirachaToolCategoryBlurb -Category $category
+                if ($categoryBlurb) {
+                    $blurb = New-Object Windows.Controls.TextBlock
+                    $blurb.Text = $categoryBlurb
+                    $blurb.TextWrapping = "Wrap"
+                    $blurb.FontSize = 11
+                    $blurb.Margin = "5,0,10,8"
+                    $blurb.SetResourceReference([Windows.Controls.TextBlock]::ForegroundProperty, "TextSecondary")
+                    $stackPanel.Children.Add($blurb) | Out-Null
+                }
+
                 $sync[$category] = $label
 
                 # Sort entries by Order and then by Name, but only display Name
@@ -6019,16 +6070,27 @@ function Invoke-WPFUIElements {
                             $horizontalStackPanel = New-Object Windows.Controls.StackPanel
                             $horizontalStackPanel.Orientation = "Horizontal"
 
+                            # Same card treatment as the Apps tab, so a click anywhere on the
+                            # row toggles it and both tabs behave the same way
                             $checkBox = New-Object Windows.Controls.CheckBox
                             $checkBox.Name = $entryInfo.Name
-                            $checkBox.Content = $entryInfo.Content
+                            $tweakCardStyle = $window.FindResource("AppCardStyle")
+                            if ($tweakCardStyle) { $checkBox.Style = $tweakCardStyle }
+                            $contentTextBlock = New-Object Windows.Controls.TextBlock
+                            $contentTextBlock.Text = $entryInfo.Content
+                            $contentTextBlock.TextWrapping = "Wrap"
+                            $contentTextBlock.VerticalAlignment = "Center"
+                            $checkBox.Content = $contentTextBlock
                             $checkBox.FontSize = $theme.FontSize
                             $checkBox.ToolTip = $entryInfo.Description
-                            $checkBox.Margin = $theme.CheckBoxMargin
+                            $checkBox.Margin = "0,2,0,2"
                             if ($entryInfo.Checked -eq $true) {
                                 $checkBox.IsChecked = $entryInfo.Checked
                             }
                             $horizontalStackPanel.Children.Add($checkBox) | Out-Null
+                            # Let search hide the row (checkbox plus its link) rather than the
+                            # checkbox alone, which used to leave a stray "(?)" behind
+                            $sync[$entryInfo.Name + "Container"] = $horizontalStackPanel
 
                             if ($entryInfo.Link) {
                                 $textBlock = New-Object Windows.Controls.TextBlock
@@ -12927,8 +12989,8 @@ $sync.configs.tweaks = @'
 
   "WPFTweaksAppxMicrosoftWindowsFeedbackHub": {
     "Content": "Feedback Hub",
-    "Description": "Allows users to submit bug reports, feature suggestions, and diagnostic data directly to Microsoft. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Feedback Hub from Windows. Allows users to submit bug reports, feature suggestions, and diagnostic data directly to Microsoft. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a001_",
     "InvokeScript": [
@@ -12940,8 +13002,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftGetHelp": {
     "Content": "Get Help",
-    "Description": "Provides access to automated troubleshooting guides, support documentation, and direct Microsoft customer assistance. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Get Help from Windows. Provides access to automated troubleshooting guides, support documentation, and direct Microsoft customer assistance. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a002_",
     "InvokeScript": [
@@ -12953,8 +13015,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftMicrosoftOfficeHub": {
     "Content": "Microsoft 365",
-    "Description": "Serves as a centralized launcher and dashboard for accessing cloud-based Microsoft 365 apps and recent documents. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Microsoft 365 from Windows. Serves as a centralized launcher and dashboard for accessing cloud-based Microsoft 365 apps and recent documents. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a003_",
     "InvokeScript": [
@@ -12966,8 +13028,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMSTeams": {
     "Content": "Microsoft Teams",
-    "Description": "Facilitates instant messaging, video conferencing, file sharing, and workspace collaboration. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Microsoft Teams from Windows. Facilitates instant messaging, video conferencing, file sharing, and workspace collaboration. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a004_",
     "InvokeScript": [
@@ -12979,8 +13041,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftOutlookForWindows": {
     "Content": "Outlook for Windows",
-    "Description": "Provides modern email management, calendar scheduling, and contact organization features. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Outlook for Windows from Windows. Provides modern email management, calendar scheduling, and contact organization features. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a005_",
     "InvokeScript": [
@@ -12992,8 +13054,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftWindowsCrossDevice": {
     "Content": "Mobile Devices",
-    "Description": "Manages system-level background connectivity with paired mobile devices. Removing this may disable cross-device features such as phone screen mirroring, file transfer, and mobile hotspot handoff integrated into Windows Settings. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Mobile Devices from Windows. Manages system-level background connectivity with paired mobile devices. Removing this may disable cross-device features such as phone screen mirroring, file transfer, and mobile hotspot handoff integrated into Windows Settings. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a006_",
     "InvokeScript": [
@@ -13005,8 +13067,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftYourPhone": {
     "Content": "Phone Link",
-    "Description": "Synchronizes text messages, phone notifications, photos, and calls from a mobile device to the desktop. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Phone Link from Windows. Synchronizes text messages, phone notifications, photos, and calls from a mobile device to the desktop. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a007_",
     "InvokeScript": [
@@ -13018,8 +13080,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftWindowsCalculator": {
     "Content": "Calculator",
-    "Description": "Performs standard arithmetic, scientific operations, programming calculations, and unit conversions. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Calculator from Windows. Performs standard arithmetic, scientific operations, programming calculations, and unit conversions. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a008_",
     "InvokeScript": [
@@ -13031,8 +13093,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftWindowsCamera": {
     "Content": "Camera",
-    "Description": "Captures photographs and records video files via connected webcams or imaging hardware. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Camera from Windows. Captures photographs and records video files via connected webcams or imaging hardware. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a009_",
     "InvokeScript": [
@@ -13044,8 +13106,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxClipchampClipchamp": {
     "Content": "Clipchamp",
-    "Description": "Provides a user-friendly video editor with built-in templates, effects, and timeline editing tools. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Clipchamp from Windows. Provides a user-friendly video editor with built-in templates, effects, and timeline editing tools. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a010_",
     "InvokeScript": [
@@ -13057,8 +13119,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftWindowsAlarms": {
     "Content": "Clock",
-    "Description": "Features world clocks, alarms, countdown timers, stopwatches, and dedicated focus session tracking. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Clock from Windows. Features world clocks, alarms, countdown timers, stopwatches, and dedicated focus session tracking. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a011_",
     "InvokeScript": [
@@ -13070,8 +13132,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftZuneMusic": {
     "Content": "Media Player",
-    "Description": "Plays local audio and video files with modern playlist management and casting capabilities. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Media Player from Windows. Plays local audio and video files with modern playlist management and casting capabilities. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a012_",
     "InvokeScript": [
@@ -13083,8 +13145,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftWindowsNotepad": {
     "Content": "Notepad",
-    "Description": "Provides a lightweight text editor with multi-tab support for plain text files and code snippets. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Notepad from Windows. Provides a lightweight text editor with multi-tab support for plain text files and code snippets. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a013_",
     "InvokeScript": [
@@ -13096,8 +13158,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftPaint": {
     "Content": "Paint",
-    "Description": "Provides built-in digital sketching, basic image editing, and pixel-level graphic manipulation tools. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Paint from Windows. Provides built-in digital sketching, basic image editing, and pixel-level graphic manipulation tools. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a014_",
     "InvokeScript": [
@@ -13109,8 +13171,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftWindowsPhotos": {
     "Content": "Photos",
-    "Description": "Organizes, views, and crops local images with basic color adjustment and album creation tools. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Photos from Windows. Organizes, views, and crops local images with basic color adjustment and album creation tools. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a015_",
     "InvokeScript": [
@@ -13122,8 +13184,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftCorporationIIQuickAssist": {
     "Content": "Quick Assist",
-    "Description": "Enables secure remote technical support and screen sharing over an internet connection. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Quick Assist from Windows. Enables secure remote technical support and screen sharing over an internet connection. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a016_",
     "InvokeScript": [
@@ -13135,8 +13197,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftScreenSketch": {
     "Content": "Snipping Tool",
-    "Description": "Captures screenshots or screen recordings with built-in markup, image cropping, and optical character recognition (OCR). Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Snipping Tool from Windows. Captures screenshots or screen recordings with built-in markup, image cropping, and optical character recognition (OCR). Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a017_",
     "InvokeScript": [
@@ -13148,8 +13210,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftWindowsSoundRecorder": {
     "Content": "Sound Recorder",
-    "Description": "Records and trims live audio inputs with simple microphone adjustment controls. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Sound Recorder from Windows. Records and trims live audio inputs with simple microphone adjustment controls. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a018_",
     "InvokeScript": [
@@ -13161,8 +13223,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftMicrosoftStickyNotes": {
     "Content": "Sticky Notes",
-    "Description": "Creates quick, floating text notes on the desktop that automatically sync across devices. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Sticky Notes from Windows. Creates quick, floating text notes on the desktop that automatically sync across devices. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a019_",
     "InvokeScript": [
@@ -13174,8 +13236,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftTodos": {
     "Content": "To Do",
-    "Description": "Creates, tracks, and synchronizes personal tasks, smart lists, and daily reminders. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes To Do from Windows. Creates, tracks, and synchronizes personal tasks, smart lists, and daily reminders. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a020_",
     "InvokeScript": [
@@ -13187,8 +13249,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftBingSearch": {
     "Content": "Bing Search",
-    "Description": "Integrates Microsoft Bing search capabilities and web services directly into the operating system. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Bing Search from Windows. Integrates Microsoft Bing search capabilities and web services directly into the operating system. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a021_",
     "InvokeScript": [
@@ -13200,8 +13262,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftCopilot": {
     "Content": "Copilot",
-    "Description": "Launches the Microsoft AI companion for contextual answers, creative writing assistance, and intelligent web search. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Copilot from Windows. Launches the Microsoft AI companion for contextual answers, creative writing assistance, and intelligent web search. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a022_",
     "InvokeScript": [
@@ -13213,8 +13275,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftBingNews": {
     "Content": "News",
-    "Description": "Aggregates breaking news headlines, personalized article feeds, and world current events. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes News from Windows. Aggregates breaking news headlines, personalized article feeds, and world current events. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a023_",
     "InvokeScript": [
@@ -13226,8 +13288,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftStartExperiencesApp": {
     "Content": "Start Experiences App",
-    "Description": "Powers the Windows Widgets board, delivering a personalized feed of news, weather, sports, and finance content. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Start Experiences App from Windows. Powers the Windows Widgets board, delivering a personalized feed of news, weather, sports, and finance content. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a024_",
     "InvokeScript": [
@@ -13239,8 +13301,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftBingWeather": {
     "Content": "Weather",
-    "Description": "Displays local real-time weather tracking, radar maps, and historical meteorological forecasts. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Weather from Windows. Displays local real-time weather tracking, radar maps, and historical meteorological forecasts. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a025_",
     "InvokeScript": [
@@ -13252,8 +13314,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftWindowsDevHome": {
     "Content": "Dev Home",
-    "Description": "Provides a specialized dashboard for software developer environment setups, repository syncing, and hardware widgets. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Dev Home from Windows. Provides a specialized dashboard for software developer environment setups, repository syncing, and hardware widgets. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a026_",
     "InvokeScript": [
@@ -13265,8 +13327,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftPowerAutomateDesktop": {
     "Content": "Power Automate",
-    "Description": "Automates repetitive workflows and desktop tasks using low-code visual scripting. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Power Automate from Windows. Automates repetitive workflows and desktop tasks using low-code visual scripting. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a027_",
     "InvokeScript": [
@@ -13278,8 +13340,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftMicrosoftSolitaireCollection": {
     "Content": "Solitaire Collection",
-    "Description": "Bundles built-in card game modes including Klondike, Spider, FreeCell, Pyramid, and TriPeaks alongside daily challenges. Restore re-registers the local package if its files are still present.",
-    "category": "Built-in Apps",
+    "Description": "Removes Solitaire Collection from Windows. Bundles built-in card game modes including Klondike, Spider, FreeCell, Pyramid, and TriPeaks alongside daily challenges. Restore re-registers the local package if its files are still present.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a028_",
     "InvokeScript": [
@@ -13291,8 +13353,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftGamingApp": {
     "Content": "Xbox App",
-    "Description": "Serves as the primary gaming library manager, social community interface, and PC Game Pass dashboard. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Xbox App from Windows. Serves as the primary gaming library manager, social community interface, and PC Game Pass dashboard. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a029_",
     "InvokeScript": [
@@ -13304,8 +13366,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftXboxGamingOverlay": {
     "Content": "Xbox Game Bar",
-    "Description": "Provides customizable in-game status widgets, audio balancing sliders, system monitoring tools, and gameplay recording. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Xbox Game Bar from Windows. Provides customizable in-game status widgets, audio balancing sliders, system monitoring tools, and gameplay recording. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a030_",
     "InvokeScript": [
@@ -13317,8 +13379,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftXboxIdentityProvider": {
     "Content": "Xbox Identity Provider",
-    "Description": "Manages Xbox network user authentication and background account validation for connected titles. Warning: removing this may break Microsoft account sign-in for non-Xbox games and apps that rely on this authentication pipeline. Reinstallable from the Microsoft Store.",
-    "category": "Built-in Apps",
+    "Description": "Removes Xbox Identity Provider from Windows. Manages Xbox network user authentication and background account validation for connected titles. Warning: removing this may break Microsoft account sign-in for non-Xbox games and apps that rely on this authentication pipeline. Reinstallable from the Microsoft Store.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a031_",
     "InvokeScript": [
@@ -13330,8 +13392,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftXboxSpeechToTextOverlay": {
     "Content": "Xbox Speech To Text Overlay",
-    "Description": "Provides system-level live accessibility captions and voice-to-text translation for gaming chat networks. Restore re-registers the local package if its files are still present.",
-    "category": "Built-in Apps",
+    "Description": "Removes Xbox Speech To Text Overlay from Windows. Provides system-level live accessibility captions and voice-to-text translation for gaming chat networks. Restore re-registers the local package if its files are still present.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a032_",
     "InvokeScript": [
@@ -13343,8 +13405,8 @@ $sync.configs.tweaks = @'
   },
   "WPFTweaksAppxMicrosoftXboxTCUI": {
     "Content": "Xbox TCUI",
-    "Description": "Provides core account connection UI modules for single sign-on flows within game titles. Warning: removing this may break Microsoft account authentication in games and apps that do not otherwise require the Xbox app. Restore re-registers the local package if its files are still present.",
-    "category": "Built-in Apps",
+    "Description": "Removes Xbox TCUI from Windows. Provides core account connection UI modules for single sign-on flows within game titles. Warning: removing this may break Microsoft account authentication in games and apps that do not otherwise require the Xbox app. Restore re-registers the local package if its files are still present.",
+    "category": "Remove Built-in Apps",
     "panel": "2",
     "Order": "a033_",
     "InvokeScript": [
