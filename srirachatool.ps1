@@ -546,8 +546,13 @@ function Update-SrirachaToolCommunityCard {
                     if ($iconUrl -and $sync.CommunityIcon) {
                         Set-SrirachaToolRemoteImage -Image $sync.CommunityIcon -Url $iconUrl -CachePath (Join-Path $cacheDir "community_icon.png")
                     }
-                    if ($bannerUrl -and $sync.CommunityBanner) {
-                        Set-SrirachaToolRemoteImage -Image $sync.CommunityBanner -Url $bannerUrl -CachePath (Join-Path $cacheDir "community_banner.png")
+                    if ($bannerUrl -and $sync.CommunityBannerHost) {
+                        # The brush is built here rather than in XAML: an ImageBrush is not a
+                        # FrameworkElement, so it cannot carry the Name the element harvest needs.
+                        $bannerBrush = New-Object Windows.Media.ImageBrush
+                        $bannerBrush.Stretch = "UniformToFill"
+                        $sync.CommunityBannerHost.Background = $bannerBrush
+                        Set-SrirachaToolRemoteImage -Brush $bannerBrush -Url $bannerUrl -CachePath (Join-Path $cacheDir "community_banner.png")
                     }
                 })
         }
@@ -574,12 +579,15 @@ function Set-SrirachaToolRemoteImage {
 
     param (
         [Windows.Controls.Image]$Image,
+        [Windows.Media.ImageBrush]$Brush,
         [Windows.Controls.TextBlock]$Fallback,
         [string]$Url,
         [string]$CachePath
     )
 
-    if (-not $Image -or [string]::IsNullOrWhiteSpace($Url) -or [string]::IsNullOrWhiteSpace($CachePath)) { return }
+    # Target is either an Image or an ImageBrush. The brush form exists so a banner can be
+    # painted as a Border background and get clipped to the corner radius.
+    if ((-not $Image -and -not $Brush) -or [string]::IsNullOrWhiteSpace($Url) -or [string]::IsNullOrWhiteSpace($CachePath)) { return }
     $cachePath = $CachePath
 
     if (Test-Path $cachePath) {
@@ -590,8 +598,11 @@ function Set-SrirachaToolRemoteImage {
             $bitmap.CacheOption = [Windows.Media.Imaging.BitmapCacheOption]::OnLoad
             $bitmap.UriSource = [uri]$cachePath
             $bitmap.EndInit()
-            $Image.Source = $bitmap
-            $Image.Visibility = "Visible"
+            if ($Brush) { $Brush.ImageSource = $bitmap }
+            else {
+                $Image.Source = $bitmap
+                $Image.Visibility = "Visible"
+            }
             if ($Fallback) { $Fallback.Visibility = "Collapsed" }
             return
         }
@@ -612,12 +623,13 @@ function Set-SrirachaToolRemoteImage {
         # Carry the destination on the bitmap so the completion handler knows where to write
         $bitmap | Add-Member -NotePropertyName CacheTarget -NotePropertyValue $cachePath -Force
         $bitmap | Add-Member -NotePropertyName IconImage -NotePropertyValue $Image -Force
+        $bitmap | Add-Member -NotePropertyName IconBrush -NotePropertyValue $Brush -Force
         $bitmap | Add-Member -NotePropertyName IconFallback -NotePropertyValue $Fallback -Force
 
         $bitmap.Add_DownloadCompleted({
                 $downloaded = $args[0]
                 try {
-                    $downloaded.IconImage.Visibility = "Visible"
+                    if ($downloaded.IconImage) { $downloaded.IconImage.Visibility = "Visible" }
                     if ($downloaded.IconFallback) { $downloaded.IconFallback.Visibility = "Collapsed" }
 
                     $cacheDir = Split-Path $downloaded.CacheTarget -Parent
@@ -635,11 +647,12 @@ function Set-SrirachaToolRemoteImage {
             })
 
         $bitmap.Add_DownloadFailed({
-                # Keep the letter fallback; nothing else to do
-                $args[0].IconImage.Visibility = "Collapsed"
+                # Keep whatever is underneath; nothing else to do
+                if ($args[0].IconImage) { $args[0].IconImage.Visibility = "Collapsed" }
             })
 
-        $Image.Source = $bitmap
+        if ($Brush) { $Brush.ImageSource = $bitmap }
+        else { $Image.Source = $bitmap }
     }
     catch {
         Write-Debug "Unable to request image from $Url : $($_.Exception.Message)"
@@ -14842,9 +14855,12 @@ $inputXML = @'
                                     </ControlTemplate>
                                 </Button.Template>
                                 <StackPanel>
-                                    <Grid Height="40">
-                                        <Image Name="CommunityBanner" Stretch="UniformToFill" Visibility="Collapsed"/>
-                                    </Grid>
+                                    <!-- Painted as a Border background, not an Image: a Border clips
+                                         its background to CornerRadius, so the banner follows the
+                                         card's rounded top. A raw Image is not clipped and its square
+                                         corners paint straight over the radius. Inner radius is 7,
+                                         the outer 8 less the 1px border. -->
+                                    <Border Name="CommunityBannerHost" Height="40" CornerRadius="7,7,0,0"/>
                                     <Grid Margin="10,0,10,10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
