@@ -528,8 +528,26 @@ function Update-SrirachaToolCommunityCard {
 
             $guildId = $invite.guild.id
             $cacheDir = "$env:LOCALAPPDATA\srirachatool\icons"
-            # Ask for .png even though these hashes may be animated (a_ prefix);
-            # WPF will not animate a GIF here and Discord serves a static PNG happily.
+            if (-not (Test-Path $cacheDir)) { $null = New-Item -Path $cacheDir -ItemType Directory -Force }
+
+            # An "a_" hash means the server icon is animated. Pull the GIF and keep the raw
+            # bytes: the normal image path re-encodes to PNG, which would flatten it to one
+            # frame. 64px is plenty for a 34px avatar and keeps the decode cheap.
+            $animatedIcon = $null
+            if ($invite.guild.icon -and "$($invite.guild.icon)".StartsWith("a_")) {
+                $animatedIcon = Join-Path $cacheDir "community_icon.gif"
+                if (-not (Test-Path $animatedIcon)) {
+                    try {
+                        Invoke-WebRequest -TimeoutSec 15 -UseBasicParsing -OutFile $animatedIcon `
+                            -Uri "https://cdn.discordapp.com/icons/$guildId/$($invite.guild.icon).gif?size=64"
+                    }
+                    catch {
+                        Remove-Item $animatedIcon -Force -ErrorAction SilentlyContinue
+                        $animatedIcon = $null
+                    }
+                }
+            }
+
             $iconUrl = if ($invite.guild.icon) { "https://cdn.discordapp.com/icons/$guildId/$($invite.guild.icon).png?size=128" }
             $bannerUrl = if ($invite.guild.banner) { "https://cdn.discordapp.com/banners/$guildId/$($invite.guild.banner).png?size=512" }
             elseif ($invite.guild.splash) { "https://cdn.discordapp.com/splashes/$guildId/$($invite.guild.splash).png?size=512" }
@@ -543,8 +561,15 @@ function Update-SrirachaToolCommunityCard {
                         $sync.CommunityMembers.Text = "$($invite.approximate_member_count) members"
                         $sync.CommunityCounts.Visibility = "Visible"
                     }
-                    if ($iconUrl -and $sync.CommunityIcon) {
-                        Set-SrirachaToolRemoteImage -Image $sync.CommunityIcon -Url $iconUrl -CachePath (Join-Path $cacheDir "community_icon.png")
+                    if ($sync.CommunityIcon) {
+                        # Try the animated version first, fall back to the still image
+                        $animated = $false
+                        if ($animatedIcon) {
+                            $animated = Set-SrirachaToolAnimatedImage -Image $sync.CommunityIcon -Path $animatedIcon
+                        }
+                        if (-not $animated -and $iconUrl) {
+                            Set-SrirachaToolRemoteImage -Image $sync.CommunityIcon -Url $iconUrl -CachePath (Join-Path $cacheDir "community_icon.png")
+                        }
                     }
                     if ($bannerUrl -and $sync.CommunityBannerHost) {
                         # The brush is built here rather than in XAML: an ImageBrush is not a
@@ -560,6 +585,92 @@ function Update-SrirachaToolCommunityCard {
             # Offline, rate limited, or the invite changed. The Join button still works.
             Write-Debug "Community card lookup failed: $($_.Exception.Message)"
         }
+    }
+}
+function Set-SrirachaToolAnimatedImage {
+    <#
+
+    .SYNOPSIS
+        Plays an animated GIF in an Image control.
+
+    .DESCRIPTION
+        WPF has no built-in animated GIF support: an Image bound to a GIF shows frame one
+        and stops. So the frames are decoded and composed here, then driven by an
+        ObjectAnimationUsingKeyFrames on the Source property.
+
+        Composition is required, not optional. GIF frames are commonly partial: this avatar
+        stores 14 of its 48 frames as 128x127 at a one pixel offset, so swapping raw frames
+        would jitter and show holes. Every frame here declares disposal 1 (keep previous),
+        so each is drawn over the accumulated result.
+
+        Uses the WPF animation clock rather than a DispatcherTimer deliberately, so there is
+        no timer whose tick could land on the wrong thread.
+
+    #>
+
+    param (
+        [Windows.Controls.Image]$Image,
+        [string]$Path
+    )
+
+    if (-not $Image -or -not (Test-Path $Path)) { return $false }
+
+    try {
+        $decoder = New-Object Windows.Media.Imaging.GifBitmapDecoder(
+            [uri]$Path,
+            [Windows.Media.Imaging.BitmapCreateOptions]::PreservePixelFormat,
+            [Windows.Media.Imaging.BitmapCacheOption]::OnLoad)
+
+        if ($decoder.Frames.Count -le 1) { return $false }
+
+        $width = $decoder.Frames[0].PixelWidth
+        $height = $decoder.Frames[0].PixelHeight
+        $animation = New-Object Windows.Media.Animation.ObjectAnimationUsingKeyFrames
+        $elapsed = 0
+        $previous = $null
+
+        foreach ($frame in $decoder.Frames) {
+            $left = 0; $top = 0
+            try {
+                $left = [int]$frame.Metadata.GetQuery('/imgdesc/Left')
+                $top = [int]$frame.Metadata.GetQuery('/imgdesc/Top')
+            }
+            catch {}
+
+            $visual = New-Object Windows.Media.DrawingVisual
+            $context = $visual.RenderOpen()
+            if ($previous) { $context.DrawImage($previous, (New-Object Windows.Rect(0, 0, $width, $height))) }
+            $context.DrawImage($frame, (New-Object Windows.Rect($left, $top, $frame.PixelWidth, $frame.PixelHeight)))
+            $context.Close()
+
+            $composed = New-Object Windows.Media.Imaging.RenderTargetBitmap($width, $height, 96, 96, [Windows.Media.PixelFormats]::Pbgra32)
+            $composed.Render($visual)
+            $composed.Freeze()
+            $previous = $composed
+
+            # Add returns the new index; without $null that leaks into the return value
+            $null = $animation.KeyFrames.Add((New-Object Windows.Media.Animation.DiscreteObjectKeyFrame(
+                        $composed,
+                        [Windows.Media.Animation.KeyTime]::FromTimeSpan([TimeSpan]::FromMilliseconds($elapsed)))))
+
+            # Delay is in hundredths of a second. Zero or one means "as fast as possible",
+            # which every renderer clamps; 100ms is the usual convention.
+            $delay = 0
+            try { $delay = [int]$frame.Metadata.GetQuery('/grctlext/Delay') } catch {}
+            if ($delay -le 1) { $delay = 10 }
+            $elapsed += $delay * 10
+        }
+
+        $animation.Duration = [Windows.Duration]::new([TimeSpan]::FromMilliseconds($elapsed))
+        $animation.RepeatBehavior = [Windows.Media.Animation.RepeatBehavior]::Forever
+
+        $Image.Visibility = "Visible"
+        $Image.BeginAnimation([Windows.Controls.Image]::SourceProperty, $animation)
+        return $true
+    }
+    catch {
+        Write-Debug "Unable to animate $Path : $($_.Exception.Message)"
+        return $false
     }
 }
 function Set-SrirachaToolRemoteImage {
