@@ -5907,7 +5907,37 @@ function Invoke-WPFUIElements {
                 $label.FontFamily = $theme.HeaderFontFamily
                 $categoryLabelStyle = $window.FindResource("CategoryLabelStyle")
                 if ($categoryLabelStyle) { $label.Style = $categoryLabelStyle }
-                $stackPanel.Children.Add($label) | Out-Null
+
+                # Risky groups earn a warning mark and an amber heading. That reads as caution
+                # at a glance far better than shouting the word CAUTION in the category name.
+                $isRisky = ($category -match "Advanced Tweaks" -or $category -eq "Remove Built-in Apps")
+                if ($isRisky) {
+                    $headerRow = New-Object Windows.Controls.StackPanel
+                    $headerRow.Orientation = "Horizontal"
+
+                    $warnIcon = New-Object Windows.Shapes.Path
+                    $warnIcon.Data = $window.FindResource("IconAlertTriangle")
+                    $warnIcon.Stroke = $window.FindResource("Warning")
+                    $warnIcon.StrokeThickness = 2
+                    $warnIcon.StrokeStartLineCap = "Round"
+                    $warnIcon.StrokeEndLineCap = "Round"
+                    $warnIcon.StrokeLineJoin = "Round"
+                    $warnIcon.Stretch = "Uniform"
+                    $warnIcon.Width = 15
+                    $warnIcon.Height = 15
+                    $warnIcon.Margin = "5,0,0,0"
+                    $warnIcon.VerticalAlignment = "Center"
+
+                    $label.Foreground = $window.FindResource("Warning")
+                    $label.Padding = "3,0,0,0"
+
+                    $headerRow.Children.Add($warnIcon) | Out-Null
+                    $headerRow.Children.Add($label) | Out-Null
+                    $stackPanel.Children.Add($headerRow) | Out-Null
+                }
+                else {
+                    $stackPanel.Children.Add($label) | Out-Null
+                }
 
                 # A one-line explainer under the heading. The per-tweak descriptions are
                 # tooltips, so without this the page is just a wall of bare labels, and
@@ -6070,12 +6100,12 @@ function Invoke-WPFUIElements {
                             $horizontalStackPanel = New-Object Windows.Controls.StackPanel
                             $horizontalStackPanel.Orientation = "Horizontal"
 
-                            # Same card treatment as the Apps tab, so a click anywhere on the
-                            # row toggles it and both tabs behave the same way
+                            # Deliberately NOT the Apps card style. A tweak list is dense and
+                            # settings-like, so the checkbox glyph is the affordance that shows
+                            # what is selected; card chrome on every row read as clutter and hid
+                            # the state. Apps are a browsable catalog, which is why cards suit there.
                             $checkBox = New-Object Windows.Controls.CheckBox
                             $checkBox.Name = $entryInfo.Name
-                            $tweakCardStyle = $window.FindResource("AppCardStyle")
-                            if ($tweakCardStyle) { $checkBox.Style = $tweakCardStyle }
                             $contentTextBlock = New-Object Windows.Controls.TextBlock
                             $contentTextBlock.Text = $entryInfo.Content
                             $contentTextBlock.TextWrapping = "Wrap"
@@ -6083,7 +6113,7 @@ function Invoke-WPFUIElements {
                             $checkBox.Content = $contentTextBlock
                             $checkBox.FontSize = $theme.FontSize
                             $checkBox.ToolTip = $entryInfo.Description
-                            $checkBox.Margin = "0,2,0,2"
+                            $checkBox.Margin = $theme.CheckBoxMargin
                             if ($entryInfo.Checked -eq $true) {
                                 $checkBox.IsChecked = $entryInfo.Checked
                             }
@@ -11647,7 +11677,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksUTC": {
     "Content": "Set Time to UTC (Dual Boot)",
     "Description": "Essential for computers that are dual booting. Fixes the time sync with Linux Systems.",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a027_",
     "registry": [
@@ -11664,7 +11694,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksRemoveHomeGallery": {
     "Content": "Remove Home and Gallery from explorer",
     "Description": "Removes the Home and Gallery from explorer and sets This PC as default",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a029_",
     "registry": [
@@ -11695,7 +11725,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksDisplay": {
     "Content": "Set Display for Performance",
     "Description": "Sets the system preferences to performance. You can do this manually with sysdm.cpl as well.",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a027_",
     "registry": [
@@ -11795,7 +11825,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksDeBloat": {
     "Content": "Remove ALL MS Store Apps - NOT RECOMMENDED",
     "Description": "USE WITH CAUTION!!!!! This will remove ALL Microsoft store apps other than the essentials to make winget work. Games installed by MS Store ARE INCLUDED!",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a028_",
     "appx": [
@@ -11967,7 +11997,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksRemoveEdge": {
     "Content": "Remove Microsoft Edge",
     "Description": "Uninstalls Microsoft Edge by creating a dummy MicrosoftEdge.exe in the legacy Edge folder, which unlocks the official uninstaller for a system-level removal.",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a029_",
     "InvokeScript": [
@@ -11981,7 +12011,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksWindowsAI": {
     "Content": "Disable and Remove Windows AI",
     "Description": "Disables and removes Windows AI features: Copilot, Recall, and CoreAI (blocked from reinstall by Windows Update), plus Cocreator, Generative Fill and Image Creator in Paint and the AI features in Notepad.",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a025_",
     "registry": [
@@ -12056,7 +12086,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksDisableLMS1": {
     "Content": "Disable Intel MM (vPro LMS)",
     "Description": "Intel LMS service is always listening on all ports and could be a huge security risk. There is no need to run LMS on home machines and even in the Enterprise there are better solutions.",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a026_",
     "InvokeScript": [
@@ -12070,7 +12100,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksRemoveOnedrive": {
     "Content": "Remove OneDrive",
     "Description": "Uninstalls OneDrive with its own uninstaller while protecting the files in your OneDrive folder from deletion, then removes leftovers and disables the sync service. Files stay where they are; log in to Onedrive.com if anything is missing.",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a030_",
     "InvokeScript": [
@@ -12084,7 +12114,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksRazerBlock": {
     "Content": "Block Razer Software Installs",
     "Description": "Blocks ALL Razer Software installations. The hardware works fine without any software.",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a031_",
     "registry": [
@@ -12114,7 +12144,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksDisableNotifications": {
     "Content": "Disable Notification Tray/Calendar",
     "Description": "Disables all Notifications INCLUDING Calendar",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a026_",
     "registry": [
@@ -12138,7 +12168,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksDebloatAdobe": {
     "Content": "Adobe Debloat",
     "Description": "Manages Adobe Services, Adobe Desktop Service, and Acrobat Updates",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a021_",
     "InvokeScript": [
@@ -12204,7 +12234,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksBlockAdobeNet": {
     "Content": "Adobe Network Block",
     "Description": "Reduce user interruptions by selectively blocking connections to Adobe's activation and telemetry servers. Credit: Ruddernation-Designs",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a021_",
     "InvokeScript": [
@@ -12218,7 +12248,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksRightClickMenu": {
     "Content": "Set Classic Right-Click Menu ",
     "Description": "Great Windows 11 tweak to bring back good context menus when right clicking things in explorer.",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a027_",
     "InvokeScript": [
@@ -12316,7 +12346,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksTeredo": {
     "Content": "Disable Teredo",
     "Description": "Teredo network tunneling is a ipv6 feature that can cause additional latency, but may cause problems with some games",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a023_",
     "registry": [
@@ -12339,7 +12369,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksDisableipsix": {
     "Content": "Disable IPv6",
     "Description": "Disables IPv6.",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a023_",
     "registry": [
@@ -12362,7 +12392,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksDisableBGapps": {
     "Content": "Disable Background Apps",
     "Description": "Disables all Microsoft Store apps from running in the background, which has to be done individually since Win11",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a024_",
     "registry": [
@@ -12379,7 +12409,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksDisableFSO": {
     "Content": "Disable Fullscreen Optimizations",
     "Description": "Disables FSO in all applications. NOTE: This will disable Color Management in Exclusive Fullscreen",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a024_",
     "registry": [
@@ -12922,7 +12952,7 @@ $sync.configs.tweaks = @'
   },
   "WPFOOSUbutton": {
     "Content": "Run OO Shutup 10",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a039_",
     "Type": "Button",
@@ -12930,7 +12960,7 @@ $sync.configs.tweaks = @'
   },
   "WPFchangedns": {
     "Content": "DNS",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a040_",
     "Type": "Combobox",
@@ -13494,7 +13524,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksDisableBitLocker": {
     "Content": "BitLocker - Disable",
     "Description": "Decrypts the system drive and turns BitLocker off. This can take hours on a large drive and leaves the disk unencrypted. Undo re-enables BitLocker but does not configure a recovery key for you, so save one yourself before re-enabling.",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a041_",
     "InvokeScript": [
@@ -13507,7 +13537,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksReservedStorage": {
     "Content": "Disable Reserved Storage",
     "Description": "Disables Windows Reserved Storage (7-10 GB held for updates/temp files). Recommended only on small drives. Re-enable before major Windows feature updates to avoid installation failures.",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a042_",
     "InvokeScript": [
@@ -13520,7 +13550,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksBraveDebloat": {
     "Content": "Brave Browser - Debloat",
     "Description": "Disables various annoyances like Brave Rewards, Leo AI, Crypto Wallet and VPN.",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a043_",
     "registry": [
@@ -13613,7 +13643,7 @@ $sync.configs.tweaks = @'
   "WPFTweaksDisableWarningForUnsignedRdp": {
     "Content": "RDP Unsigned File Warnings - Disable",
     "Description": "Disables warnings shown when launching unsigned RDP files introduced with the latest Windows 10 and 11 updates.",
-    "category": "z__Advanced Tweaks - CAUTION",
+    "category": "z__Advanced Tweaks",
     "panel": "1",
     "Order": "a044_",
     "registry": [
@@ -13854,6 +13884,7 @@ $inputXML = @'
         <SolidColorBrush x:Key="GlassActive" Color="#20FFFFFF"/>
         <SolidColorBrush x:Key="Danger" Color="#FF4444"/>
         <SolidColorBrush x:Key="Success" Color="#27AE60"/>
+        <SolidColorBrush x:Key="Warning" Color="#E0A030"/>
 
         <!-- Legacy Resource Mappings for Script Compatibility -->
         <SolidColorBrush x:Key="MainBackgroundColor" Color="#0c0c0d"/>
@@ -14976,7 +15007,7 @@ $inputXML = @'
                                  
                                  <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                                      <!-- Preset: Recommended -->
-                                     <Button Name="WPFstandard" Style="{StaticResource ActionButtonPreset}" Margin="0,0,8,0">
+                                     <Button Name="WPFstandard" Style="{StaticResource ActionButtonPreset}" Margin="0,0,8,0" ToolTip="Ticks 14 tweaks: everything in Minimal plus privacy, cleanup and performance changes most people want. The usual choice. Review, then press Apply Tweaks.">
                                          <StackPanel Orientation="Horizontal">
                                              <Path Data="{StaticResource IconStar}" Stroke="{StaticResource TextSecondary}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="Uniform" Width="12" Height="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                              <TextBlock Text="Recommended" VerticalAlignment="Center"/>
@@ -14984,15 +15015,15 @@ $inputXML = @'
                                      </Button>
                                      
                                      <!-- Preset: Essential -->
-                                     <Button Name="WPFminimal" Style="{StaticResource ActionButtonPreset}" Margin="0,0,8,0">
+                                     <Button Name="WPFminimal" Style="{StaticResource ActionButtonPreset}" Margin="0,0,8,0" ToolTip="Ticks 3 tweaks: the safest starting point. Telemetry, consumer features and unneeded services only. Review, then press Apply Tweaks.">
                                          <StackPanel Orientation="Horizontal">
                                              <Path Data="{StaticResource IconCircle}" Stroke="{StaticResource TextSecondary}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="Uniform" Width="12" Height="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                             <TextBlock Text="Essential" VerticalAlignment="Center"/>
+                                             <TextBlock Text="Minimal" VerticalAlignment="Center"/>
                                          </StackPanel>
                                      </Button>
 
                                      <!-- Preset: Full Debloat (aggressive, reversible) -->
-                                     <Button Name="WPFFullDebloat" Style="{StaticResource ActionButtonPreset}" Margin="0,0,8,0" ToolTip="Selects a thorough debloat set (telemetry, AI, OneDrive, Edge bloat, MS Store apps, perf). Review the ticked boxes, then Apply Tweaks.">
+                                     <Button Name="WPFFullDebloat" Style="{StaticResource ActionButtonPreset}" Margin="0,0,8,0" ToolTip="Ticks 25 tweaks: everything in Recommended plus AI removal, OneDrive, Edge bloat and Store apps. The most aggressive option, still reversible. Review, then press Apply Tweaks.">
                                          <StackPanel Orientation="Horizontal">
                                              <Path Data="{StaticResource IconFlame}" Stroke="{StaticResource TextSecondary}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="Uniform" Width="12" Height="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                              <TextBlock Text="Full Debloat" VerticalAlignment="Center"/>
