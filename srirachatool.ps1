@@ -2300,9 +2300,10 @@ function Remove-SrirachaToolAPPX {
     )
 
     try {
-        Write-Host "Removing $Name"
-        Get-AppxPackage "*$Name*" | Remove-AppxPackage -ErrorAction SilentlyContinue
-        Get-AppxProvisionedPackage -Online | Where-Object DisplayName -like "*$Name*" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
+        Write-Host "Removing $Name..."
+        # AppX cmdlets are unreliable in this pwsh 7 runspace; run them in Windows PowerShell 5.1
+        $command = "Get-AppxPackage -AllUsers -Name '*$Name*' | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -like '*$Name*' | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue"
+        Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"$command`"" -Wait -WindowStyle Hidden
     }
     catch [System.Exception] {
         if ($psitem.Exception.Message -like "*The requested operation requires elevation*") {
@@ -12750,7 +12751,6 @@ $sync.configs.tweaks = @'
       "Microsoft.GetHelp",
       "Microsoft.Getstarted",
       "Microsoft.Messaging",
-      "Microsoft.Microsoft3DViewer",
       "Microsoft.MicrosoftSolitaireCollection",
       "Microsoft.NetworkSpeedTest",
       "Microsoft.News",
@@ -12780,7 +12780,6 @@ $sync.configs.tweaks = @'
       "Microsoft.XboxIdentityProvider",
       "Microsoft.ZuneMusic",
       "Microsoft.ZuneVideo",
-      "Microsoft.Getstarted",
       "Microsoft.MicrosoftOfficeHub",
       "*EclipseManager*",
       "*ActiproSoftwareLLC*",
@@ -12829,7 +12828,7 @@ $sync.configs.tweaks = @'
       "*MarchofEmpires*"
     ],
     "InvokeScript": [
-      "\r\n        $TeamsPath = [System.IO.Path]::Combine($env:LOCALAPPDATA, 'Microsoft', 'Teams')\r\n        $TeamsUpdateExePath = [System.IO.Path]::Combine($TeamsPath, 'Update.exe')\r\n\r\n        Write-Host \"Stopping Teams process...\"\r\n        Stop-Process -Name \"*teams*\" -Force -ErrorAction SilentlyContinue\r\n\r\n        Write-Host \"Uninstalling Teams from AppData\\Microsoft\\Teams\"\r\n        if ([System.IO.File]::Exists($TeamsUpdateExePath)) {\r\n            # Uninstall app\r\n            $proc = Start-Process $TeamsUpdateExePath \"-uninstall -s\" -PassThru\r\n            $proc.WaitForExit()\r\n        }\r\n\r\n        Write-Host \"Removing Teams AppxPackage...\"\r\n        Get-AppxPackage \"*Teams*\" | Remove-AppxPackage -ErrorAction SilentlyContinue\r\n        Get-AppxPackage \"*Teams*\" -AllUsers | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue\r\n\r\n        Write-Host \"Deleting Teams directory\"\r\n        if ([System.IO.Directory]::Exists($TeamsPath)) {\r\n            Remove-Item $TeamsPath -Force -Recurse -ErrorAction SilentlyContinue\r\n        }\r\n\r\n        Write-Host \"Deleting Teams uninstall registry key\"\r\n        # Uninstall from Uninstall registry key UninstallString\r\n        $us = (Get-ChildItem -Path HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall, HKLM:\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall | Get-ItemProperty | Where-Object { $_.DisplayName -like '*Teams*'}).UninstallString\r\n        if ($us.Length -gt 0) {\r\n            $us = ($us.Replace('/I', '/uninstall ') + ' /quiet').Replace('  ', ' ')\r\n            $FilePath = ($us.Substring(0, $us.IndexOf('.exe') + 4).Trim())\r\n            $ProcessArgs = ($us.Substring($us.IndexOf('.exe') + 5).Trim().replace('  ', ' '))\r\n            $proc = Start-Process -FilePath $FilePath -Args $ProcessArgs -PassThru\r\n            $proc.WaitForExit()\r\n        }\r\n      "
+      "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"MSTeams\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ \"MSTeams\" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue'"
     ],
     "link": "https://christitustech.github.io/winutil/dev/tweaks/z--Advanced-Tweaks---CAUTION/DeBloat"
   },
