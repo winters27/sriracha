@@ -328,20 +328,11 @@ function Set-SrirachaToolScanState {
     $icon.RenderTransform.Angle = 0
     $button.IsEnabled = $true
 
+    # The result stays on the button until the next scan resets it. An earlier version used a
+    # DispatcherTimer to revert after a few seconds; its tick reached a UI object from the
+    # wrong thread and took the whole app down, and the timer bought nothing worth that risk.
     if ($Found -ge 0) {
         $label.Text = "Found $Found installed"
-
-        # Bind the timer to the form's dispatcher explicitly. The parameterless constructor
-        # binds to whichever thread constructs it, which put the tick on a worker thread and
-        # threw "The calling thread cannot access this object" when it set the label.
-        $revert = New-Object Windows.Threading.DispatcherTimer([Windows.Threading.DispatcherPriority]::Normal, $form.Dispatcher)
-        $revert.Interval = [TimeSpan]::FromSeconds(4)
-        $revert.Add_Tick({
-                $args[0].Stop()
-                if ($sync.WPFGetInstalledLabel) { $sync.WPFGetInstalledLabel.Text = "Find Installed Apps" }
-            })
-        $revert.Start()
-        $sync.ScanRevertTimer = $revert
     }
     else {
         $label.Text = "Find Installed Apps"
@@ -4378,34 +4369,45 @@ function Invoke-WPFGetInstalled {
         )
         $sync.ProcessRunning = $true
         $sync.form.Dispatcher.Invoke([action] { Set-SrirachaToolTaskbaritem -state "Indeterminate" })
+        $found = 0
 
-        if ($checkbox -eq "winget") {
-            # Walk both managers and merge. Preferring one used to hide everything installed
-            # by the other, and 4 apps in the catalog have no winget id at all.
-            Write-Host "Getting Installed Programs..."
-            $Checkboxes = @()
-            $Checkboxes += Invoke-SrirachaToolCurrentSystem -CheckBox "winget"
-            $Checkboxes += Invoke-SrirachaToolCurrentSystem -CheckBox "choco"
-            $Checkboxes = $Checkboxes | Sort-Object -Unique
+        # Anything escaping here would otherwise surface as an unhandled dispatcher
+        # exception and take the whole window down with it
+        try {
+            if ($checkbox -eq "winget") {
+                # Walk both managers and merge. Preferring one used to hide everything installed
+                # by the other, and 4 apps in the catalog have no winget id at all.
+                Write-Host "Getting Installed Programs..."
+                $Checkboxes = @()
+                $Checkboxes += Invoke-SrirachaToolCurrentSystem -CheckBox "winget"
+                $Checkboxes += Invoke-SrirachaToolCurrentSystem -CheckBox "choco"
+                $Checkboxes = $Checkboxes | Sort-Object -Unique
+            }
+            elseif ($checkbox -eq "tweaks") {
+                Write-Host "Getting Installed Tweaks..."
+                $Checkboxes = Invoke-SrirachaToolCurrentSystem -CheckBox $checkbox
+            }
+
+            $found = @($Checkboxes).Count
+            $sync.form.Dispatcher.invoke({
+                    foreach ($checkbox in $Checkboxes) {
+                        if ($sync.$checkbox) { $sync.$checkbox.ischecked = $True }
+                    }
+                })
+
+            Write-Host "Done..."
         }
-        elseif ($checkbox -eq "tweaks") {
-            Write-Host "Getting Installed Tweaks..."
-            $Checkboxes = Invoke-SrirachaToolCurrentSystem -CheckBox $checkbox
+        catch {
+            Write-Warning "Find Installed Apps failed: $($_.Exception.Message)"
+            $found = -1
         }
-
-        $found = @($Checkboxes).Count
-        $sync.form.Dispatcher.invoke({
-                foreach ($checkbox in $Checkboxes) {
-                    $sync.$checkbox.ischecked = $True
-                }
-            })
-
-        Write-Host "Done..."
-        $sync.ProcessRunning = $false
-        $sync.form.Dispatcher.Invoke([action] {
-                Set-SrirachaToolTaskbaritem -state "None"
-                Set-SrirachaToolScanState -Scanning $false -Found $found
-            })
+        finally {
+            $sync.ProcessRunning = $false
+            $sync.form.Dispatcher.Invoke([action] {
+                    Set-SrirachaToolTaskbaritem -state "None"
+                    Set-SrirachaToolScanState -Scanning $false -Found $found
+                })
+        }
     }
 }
 function Invoke-WPFImpex {
@@ -15621,6 +15623,23 @@ $sync["Form"].title = $sync["Form"].title + " " + $sync.version
 # Drive the sidebar badge from $sync.version so it cannot drift from the real version
 if ($sync["VersionBadge"]) { $sync["VersionBadge"].Text = "v" + $sync.version }
 # Set the commands that will run when the form is closed
+# A throw on the UI thread otherwise tears the whole window down, which takes the console
+# with it before anyone can read the error. Keep the app alive and record what happened.
+$sync["Form"].Dispatcher.Add_UnhandledException({
+        param($eventSender, $e)
+        $e.Handled = $true
+        Write-Host "=================================" -ForegroundColor Yellow
+        Write-Host "-- Recovered from an error --" -ForegroundColor Yellow
+        Write-Host "   $($e.Exception.Message)" -ForegroundColor Red
+        if ($e.Exception.InnerException) {
+            Write-Host "   Inner: $($e.Exception.InnerException.Message)" -ForegroundColor Red
+        }
+        Write-Host "   The window stayed open. The full trace is in the log at:" -ForegroundColor Yellow
+        Write-Host "   $env:LOCALAPPDATA\srirachatool\logs" -ForegroundColor Yellow
+        Write-Host "=================================" -ForegroundColor Yellow
+        Write-Debug $e.Exception.ToString()
+    })
+
 $sync["Form"].Add_Closing({
         Save-SrirachaToolWindowState
         $sync.runspace.Dispose()
