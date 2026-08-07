@@ -508,7 +508,7 @@ function Update-SrirachaToolCommunityCard {
     <#
 
     .SYNOPSIS
-        Fills the dashboard community card from the public Discord invite.
+        Fills the sidebar community card from the public Discord invite.
 
     .DESCRIPTION
         Resolves the invite in the background, then fills in the real server name, avatar,
@@ -14824,6 +14824,53 @@ $inputXML = @'
                                     <TextBlock Text="Config File" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
+                            <!-- Community card. Name, avatar, banner and counts come from the public invite at
+                                 runtime, and it degrades to just the name when offline. A Button rather than a
+                                 Border, so the click is marked handled and does not start a window drag. -->
+                            <Button Name="CommunityCard" Margin="0,12,0,0" Padding="0" Cursor="Hand" Visibility="Collapsed" HorizontalContentAlignment="Stretch" ToolTip="Join the Sriracha Gang Discord">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="CommunityBorder" Background="{StaticResource GlassMedium}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" SnapsToDevicePixels="True">
+                                            <ContentPresenter/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="CommunityBorder" Property="Background" Value="{StaticResource GlassHover}"/>
+                                                <Setter TargetName="CommunityBorder" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                                <StackPanel>
+                                    <Grid Height="40">
+                                        <Image Name="CommunityBanner" Stretch="UniformToFill" Visibility="Collapsed"/>
+                                    </Grid>
+                                    <Grid Margin="10,0,10,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="34" Height="34" CornerRadius="17" Margin="0,-17,8,0" VerticalAlignment="Top" Background="{StaticResource BgBase}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="2">
+                                            <Grid>
+                                                <Path Data="{StaticResource IconFlame}" Stroke="{StaticResource Accent}" StrokeThickness="2" Stretch="Uniform" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <Image Name="CommunityIcon" Stretch="UniformToFill" Visibility="Collapsed">
+                                                    <Image.Clip>
+                                                        <EllipseGeometry Center="15,15" RadiusX="15" RadiusY="15"/>
+                                                    </Image.Clip>
+                                                </Image>
+                                            </Grid>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Margin="0,6,0,0">
+                                            <TextBlock Name="CommunityName" Text="Sriracha Gang" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                            <StackPanel Name="CommunityCounts" Orientation="Horizontal" Margin="0,2,0,0" Visibility="Collapsed">
+                                                <Ellipse Width="6" Height="6" Fill="{StaticResource Success}" VerticalAlignment="Center"/>
+                                                <TextBlock Name="CommunityOnline" Margin="4,0,0,0" FontSize="10" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                                <TextBlock Name="CommunityMembers" Margin="6,0,0,0" FontSize="10" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Button>
 
                         </StackPanel>
                     </Grid>
@@ -14950,13 +14997,7 @@ $inputXML = @'
                                     </Grid>
                                     
                                     <!-- System Overview (Neofetch-Style) -->
-                                    <!-- Row 2: system overview beside the community card -->
-                                    <Grid Grid.Row="2">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Margin="0,0,10,0" Background="{StaticResource GlassLight}" CornerRadius="12" Padding="20">
+                                    <Border Grid.Row="2" Background="{StaticResource GlassLight}" CornerRadius="12" Padding="20">
                                         <StackPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                                                 <TextBlock Text="System Overview" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
@@ -15021,44 +15062,6 @@ $inputXML = @'
                                             </Grid>
                                         </StackPanel>
                                     </Border>
-                                        <!-- Community card. Server name, avatar, banner and member counts are
-                                             fetched from the public invite at runtime; it degrades to a plain
-                                             Join button when offline. -->
-                                        <Border Name="CommunityCard" Grid.Column="1" Width="300" VerticalAlignment="Top" Background="{StaticResource GlassLight}" CornerRadius="12" Visibility="Collapsed">
-                                            <StackPanel>
-                                                <Grid Height="90">
-                                                    <Border Background="{StaticResource GlassMedium}" CornerRadius="12,12,0,0"/>
-                                                    <Image Name="CommunityBanner" Stretch="UniformToFill" Visibility="Collapsed"/>
-                                                </Grid>
-                                                <Grid Margin="16,0,16,16">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Border Grid.Column="0" Width="56" Height="56" CornerRadius="28" Margin="0,-28,12,0" VerticalAlignment="Top" Background="{StaticResource BgBase}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="2">
-                                                        <Grid>
-                                                            <Path Data="{StaticResource IconFlame}" Stroke="{StaticResource Accent}" StrokeThickness="2" Stretch="Uniform" Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                            <Image Name="CommunityIcon" Stretch="UniformToFill" Visibility="Collapsed">
-                                                                <Image.Clip>
-                                                                    <EllipseGeometry Center="26,26" RadiusX="26" RadiusY="26"/>
-                                                                </Image.Clip>
-                                                            </Image>
-                                                        </Grid>
-                                                    </Border>
-                                                    <StackPanel Grid.Column="1" Margin="0,8,0,0">
-                                                        <TextBlock Name="CommunityName" Text="Sriracha Gang" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" TextTrimming="CharacterEllipsis"/>
-                                                        <StackPanel Name="CommunityCounts" Orientation="Horizontal" Margin="0,4,0,0" Visibility="Collapsed">
-                                                            <Ellipse Width="8" Height="8" Fill="{StaticResource Success}" VerticalAlignment="Center"/>
-                                                            <TextBlock Name="CommunityOnline" Margin="6,0,0,0" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
-                                                            <Ellipse Width="8" Height="8" Fill="{StaticResource TextSecondary}" Margin="12,0,0,0" VerticalAlignment="Center"/>
-                                                            <TextBlock Name="CommunityMembers" Margin="6,0,0,0" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
-                                                        </StackPanel>
-                                                        <Button Name="CommunityJoin" Content="Join the Discord" Style="{StaticResource ActionButtonPrimary}" HorizontalAlignment="Left" Margin="0,12,0,0" ToolTip="Opens the Sriracha Gang invite in your browser"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                            </StackPanel>
-                                        </Border>
-                                    </Grid>
                                 </Grid>
                             </ScrollViewer>
                         </TabItem>
@@ -15594,12 +15597,10 @@ $sync.selectedAppsStackPanel = $sync["SelectedAppsList"]
 # Community card. Shown only when an invite is actually configured.
 if ($sync.CommunityCard -and -not [string]::IsNullOrWhiteSpace($sync.CommunityUrl)) {
     $sync.CommunityCard.Visibility = "Visible"
-    if ($sync.CommunityJoin) {
-        $sync.CommunityJoin.Add_Click({
-                try { Start-Process $sync.CommunityUrl }
-                catch { Write-Warning "Unable to open $($sync.CommunityUrl): $($_.Exception.Message)" }
-            })
-    }
+    $sync.CommunityCard.Add_Click({
+            try { Start-Process $sync.CommunityUrl }
+            catch { Write-Warning "Unable to open $($sync.CommunityUrl): $($_.Exception.Message)" }
+        })
     Update-SrirachaToolCommunityCard
 }
 if ($sync.SelectedAppsClear) {
