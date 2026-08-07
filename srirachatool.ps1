@@ -134,39 +134,54 @@ function Add-SelectedAppsMenuItem {
 
     param ([string]$name, [string]$key)
 
+    if (-not $sync.selectedAppsstackPanel) { return }
+
     $selectedAppGrid = New-Object Windows.Controls.Grid
+    $selectedAppGrid.Margin = "0,1,0,1"
 
     $selectedAppGrid.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition -Property @{Width = "*" }))
-    $selectedAppGrid.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition -Property @{Width = "30" }))
+    $selectedAppGrid.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition -Property @{Width = "Auto" }))
 
-    # Sets the name to the Content as well as the Tooltip, because the parent Popup Border has a fixed width and text could "overflow".
-    # With the tooltip, you can still read the whole entry on hover
-    $selectedAppLabel = New-Object Windows.Controls.Label
-    $selectedAppLabel.Content = $name
+    # The sidebar is narrow, so long names are trimmed and the full name lives in the tooltip
+    $selectedAppLabel = New-Object Windows.Controls.TextBlock
+    $selectedAppLabel.Text = $name
     $selectedAppLabel.ToolTip = $name
+    $selectedAppLabel.FontSize = 12
+    $selectedAppLabel.TextTrimming = "CharacterEllipsis"
+    $selectedAppLabel.VerticalAlignment = "Center"
     $selectedAppLabel.HorizontalAlignment = "Left"
-    $selectedAppLabel.SetResourceReference([Windows.Controls.Control]::ForegroundProperty, "MainForegroundColor")
+    $selectedAppLabel.SetResourceReference([Windows.Controls.TextBlock]::ForegroundProperty, "TextPrimary")
     [System.Windows.Controls.Grid]::SetColumn($selectedAppLabel, 0)
     $selectedAppGrid.Children.Add($selectedAppLabel)
 
     $selectedAppRemoveButton = New-Object Windows.Controls.Button
-    $selectedAppRemoveButton.FontFamily = "Segoe MDL2 Assets"
-    $selectedAppRemoveButton.Content = [string]([char]0xE711)
-    $selectedAppRemoveButton.HorizontalAlignment = "Center"
+    $selectedAppRemoveButton.Content = "x"
+    $selectedAppRemoveButton.Width = 18
+    $selectedAppRemoveButton.Height = 18
+    $selectedAppRemoveButton.FontSize = 11
+    $selectedAppRemoveButton.Padding = "0"
+    $selectedAppRemoveButton.Background = "Transparent"
+    $selectedAppRemoveButton.BorderThickness = "0"
+    $selectedAppRemoveButton.Cursor = "Hand"
     $selectedAppRemoveButton.Tag = $key
     $selectedAppRemoveButton.ToolTip = "Remove the App from Selection"
-    $selectedAppRemoveButton.SetResourceReference([Windows.Controls.Control]::ForegroundProperty, "MainForegroundColor")
-    $selectedAppRemoveButton.SetResourceReference([Windows.Controls.Control]::StyleProperty, "HoverButtonStyle")
+    $selectedAppRemoveButton.SetResourceReference([Windows.Controls.Control]::ForegroundProperty, "TextSecondary")
+
+    # Bare template so the button reads as an inline affordance rather than a chip
+    $template = [Windows.Markup.XamlReader]::Parse(
+        '<ControlTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" TargetType="Button">' +
+        '<Border Background="Transparent"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>' +
+        '</ControlTemplate>')
+    $selectedAppRemoveButton.Template = $template
 
     # Highlight the Remove icon on Hover
-    $selectedAppRemoveButton.Add_MouseEnter({ $this.Foreground = "Red" })
-    $selectedAppRemoveButton.Add_MouseLeave({ $this.SetResourceReference([Windows.Controls.Control]::ForegroundProperty, "MainForegroundColor") })
+    $selectedAppRemoveButton.Add_MouseEnter({ $this.SetResourceReference([Windows.Controls.Control]::ForegroundProperty, "Danger") })
+    $selectedAppRemoveButton.Add_MouseLeave({ $this.SetResourceReference([Windows.Controls.Control]::ForegroundProperty, "TextSecondary") })
     $selectedAppRemoveButton.Add_Click({
             $sync.($this.Tag).isChecked = $false # On click of the remove button, we only have to uncheck the corresponding checkbox. This will kick of all necessary changes to update the UI
         })
     [System.Windows.Controls.Grid]::SetColumn($selectedAppRemoveButton, 1)
     $selectedAppGrid.Children.Add($selectedAppRemoveButton)
-    # Add new Element to Popup
     $sync.selectedAppsstackPanel.Children.Add($selectedAppGrid)
 }
 Function Get-SrirachaToolCheckBoxes {
@@ -4754,12 +4769,21 @@ function Invoke-WPFSelectedAppsUpdate {
     }
 
     $count = $sync.SelectedApps.Count
-    
+
     # Update UI elements only if they exist
     if ($selectedAppsButton) {
         $selectedAppsButton.Content = "Selected Apps: $count"
     }
-    
+
+    if ($sync.SelectedAppsCount) {
+        $sync.SelectedAppsCount.Text = "$count"
+    }
+
+    # Hide the whole panel when nothing is selected, so the sidebar stays quiet until it has something to say
+    if ($sync.SelectedAppsPanel) {
+        $sync.SelectedAppsPanel.Visibility = if ($count -gt 0) { "Visible" } else { "Collapsed" }
+    }
+
     # On every change, remove all entries inside the Popup Menu. This is done, so we can keep the alphabetical order even if elements are selected in a random way
     if ($sync.selectedAppsstackPanel) {
         $sync.selectedAppsstackPanel.Children.Clear()
@@ -14442,7 +14466,39 @@ $inputXML = @'
                                 </StackPanel>
                             </ToggleButton>
                         </StackPanel>
-                        
+
+                        <!-- Selected applications: fills the gap between nav and footer -->
+                        <Grid Name="SelectedAppsPanel" Grid.Row="2" Margin="0,24,0,12" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,8">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="SELECTED" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                    <Border Background="{StaticResource GlassMedium}" CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Name="SelectedAppsCount" Text="0" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
+                                    </Border>
+                                </StackPanel>
+                                <Button Name="SelectedAppsClear" Content="Clear" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                        Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="4,0"
+                                        FontSize="11" Foreground="{StaticResource TextSecondary}" ToolTip="Clear the whole selection">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </Grid>
+
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel Name="SelectedAppsList"/>
+                            </ScrollViewer>
+                        </Grid>
+
                         <!-- Footer Actions -->
                         <StackPanel Grid.Row="3">
                             <Button Name="AboutButton" Style="{StaticResource GlassButton}" Margin="0,5" Background="Transparent" HorizontalContentAlignment="Left" BorderThickness="0">
@@ -15178,6 +15234,17 @@ Invoke-WPFUIElements -configVariable $sync.configs.feature -targetGridName "feat
 #===========================================================================
 
 $xaml.SelectNodes("//*[@Name]") | ForEach-Object { $sync["$("$($psitem.Name)")"] = $sync["Form"].FindName($psitem.Name) }
+
+# Point the long-standing selected-apps helpers at the sidebar panel
+$sync.selectedAppsStackPanel = $sync["SelectedAppsList"]
+if ($sync.SelectedAppsClear) {
+    $sync.SelectedAppsClear.Add_Click({
+            # Copy first: unchecking mutates the collection this loop reads from
+            foreach ($appKey in @($sync.selectedApps)) {
+                if ($sync[$appKey]) { $sync[$appKey].IsChecked = $false }
+            }
+        })
+}
 
 # Initialize the package manager preference system
 Set-PackageManagerPreference
