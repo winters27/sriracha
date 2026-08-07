@@ -11061,7 +11061,7 @@ $sync.configs.tweaks = @'
       {
         "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation",
         "Name": "RealTimeIsUniversal",
-        "Type": "DWord",
+        "Type": "QWord",
         "Value": "1",
         "OriginalValue": "0"
       }
@@ -11841,7 +11841,7 @@ $sync.configs.tweaks = @'
         "Value": "2",
         "OriginalValue": "0",
         "DefaultState": "false",
-        "Type": "DWord"
+        "Type": "String"
       },
       {
         "Path": "HKCU:\\Control Panel\\Keyboard",
@@ -11849,7 +11849,7 @@ $sync.configs.tweaks = @'
         "Value": "2",
         "OriginalValue": "0",
         "DefaultState": "false",
-        "Type": "DWord"
+        "Type": "String"
       }
     ],
     "link": "https://christitustech.github.io/winutil/dev/tweaks/Customize-Preferences/NumLock"
@@ -12041,7 +12041,7 @@ $sync.configs.tweaks = @'
       {
         "Path": "HKCU:\\Control Panel\\Accessibility\\StickyKeys",
         "Name": "Flags",
-        "Value": "510",
+        "Value": "506",
         "OriginalValue": "58",
         "DefaultState": "true",
         "Type": "DWord"
@@ -12093,8 +12093,8 @@ $sync.configs.tweaks = @'
     "link": "https://winutil.christitus.com/dev/tweaks/customize-preferences/newoutlook"
   },
   "WPFToggleMultiplaneOverlay": {
-    "Content": "Disable Multiplane Overlay",
-    "Description": "Disable the Multiplane Overlay which can sometimes cause issues with Graphics Cards.",
+    "Content": "Multiplane Overlay",
+    "Description": "Multiplane Overlay composes multiple image layers, which can sometimes cause issues with graphics cards. Turn this off if you see flickering or black windows.",
     "category": "Customize Preferences",
     "panel": "2",
     "Order": "a111_",
@@ -12103,13 +12103,21 @@ $sync.configs.tweaks = @'
       {
         "Path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Dwm",
         "Name": "OverlayTestMode",
-        "Value": "5",
-        "OriginalValue": "<RemoveEntry>",
-        "DefaultState": "false",
+        "Value": "0",
+        "OriginalValue": "5",
+        "DefaultState": "true",
+        "Type": "DWord"
+      },
+      {
+        "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers",
+        "Name": "DisableOverlays",
+        "Value": "0",
+        "OriginalValue": "1",
+        "DefaultState": "true",
         "Type": "DWord"
       }
     ],
-    "link": "https://winutil.christitus.com/dev/tweaks/customize-preferences/multplaneoverlay"
+    "link": "https://winutil.christitus.com/code-reference/tweaks/customize-preferences/multiplaneoverlay"
   },
   "WPFToggleHiddenFiles": {
     "Content": "Show Hidden Files",
