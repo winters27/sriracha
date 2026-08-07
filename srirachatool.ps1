@@ -501,7 +501,86 @@ function Add-SrirachaToolIconRequest {
 
     $source = Get-SrirachaToolIconSource -Link $Link
     if (-not $source) { return }
-    $cachePath = $source.CachePath
+
+    Set-SrirachaToolRemoteImage -Image $Image -Fallback $Fallback -Url $source.Url -CachePath $source.CachePath
+}
+function Update-SrirachaToolCommunityCard {
+    <#
+
+    .SYNOPSIS
+        Fills the dashboard community card from the public Discord invite.
+
+    .DESCRIPTION
+        Resolves the invite in the background, then fills in the real server name, avatar,
+        banner and member counts. No token or auth is involved: the invite endpoint is
+        public. The card already shows a working Join button before any of this lands, so
+        an offline machine or a changed invite loses only the decoration, never the link.
+
+    #>
+
+    if ([string]::IsNullOrWhiteSpace($sync.CommunityUrl)) { return }
+
+    Invoke-WPFRunspace -ScriptBlock {
+        try {
+            $code = ($sync.CommunityUrl.TrimEnd('/') -split '/')[-1]
+            $invite = Invoke-RestMethod -TimeoutSec 10 -UseBasicParsing `
+                -Uri "https://discord.com/api/v10/invites/$code`?with_counts=true"
+
+            $guildId = $invite.guild.id
+            $cacheDir = "$env:LOCALAPPDATA\srirachatool\icons"
+            # Ask for .png even though these hashes may be animated (a_ prefix);
+            # WPF will not animate a GIF here and Discord serves a static PNG happily.
+            $iconUrl = if ($invite.guild.icon) { "https://cdn.discordapp.com/icons/$guildId/$($invite.guild.icon).png?size=128" }
+            $bannerUrl = if ($invite.guild.banner) { "https://cdn.discordapp.com/banners/$guildId/$($invite.guild.banner).png?size=512" }
+            elseif ($invite.guild.splash) { "https://cdn.discordapp.com/splashes/$guildId/$($invite.guild.splash).png?size=512" }
+
+            $sync.form.Dispatcher.Invoke([action] {
+                    if ($invite.guild.name -and $sync.CommunityName) {
+                        $sync.CommunityName.Text = $invite.guild.name
+                    }
+                    if ($null -ne $invite.approximate_presence_count -and $sync.CommunityCounts) {
+                        $sync.CommunityOnline.Text = "$($invite.approximate_presence_count) online"
+                        $sync.CommunityMembers.Text = "$($invite.approximate_member_count) members"
+                        $sync.CommunityCounts.Visibility = "Visible"
+                    }
+                    if ($iconUrl -and $sync.CommunityIcon) {
+                        Set-SrirachaToolRemoteImage -Image $sync.CommunityIcon -Url $iconUrl -CachePath (Join-Path $cacheDir "community_icon.png")
+                    }
+                    if ($bannerUrl -and $sync.CommunityBanner) {
+                        Set-SrirachaToolRemoteImage -Image $sync.CommunityBanner -Url $bannerUrl -CachePath (Join-Path $cacheDir "community_banner.png")
+                    }
+                })
+        }
+        catch {
+            # Offline, rate limited, or the invite changed. The Join button still works.
+            Write-Debug "Community card lookup failed: $($_.Exception.Message)"
+        }
+    }
+}
+function Set-SrirachaToolRemoteImage {
+    <#
+
+    .SYNOPSIS
+        Fills an Image from a URL, using a local cache, without blocking the UI thread.
+
+    .DESCRIPTION
+        A cached file is read straight off disk, so a warm cache costs no network at all
+        and works offline. A miss is handed to WPF as a remote source, which downloads
+        images in parallel on its own threads; the result is written to the cache so the
+        next launch is instant. Failure is silent by design: whatever is underneath stays
+        on screen, so a missing image degrades instead of breaking.
+
+    #>
+
+    param (
+        [Windows.Controls.Image]$Image,
+        [Windows.Controls.TextBlock]$Fallback,
+        [string]$Url,
+        [string]$CachePath
+    )
+
+    if (-not $Image -or [string]::IsNullOrWhiteSpace($Url) -or [string]::IsNullOrWhiteSpace($CachePath)) { return }
+    $cachePath = $CachePath
 
     if (Test-Path $cachePath) {
         try {
@@ -513,7 +592,7 @@ function Add-SrirachaToolIconRequest {
             $bitmap.EndInit()
             $Image.Source = $bitmap
             $Image.Visibility = "Visible"
-            $Fallback.Visibility = "Collapsed"
+            if ($Fallback) { $Fallback.Visibility = "Collapsed" }
             return
         }
         catch {
@@ -525,9 +604,9 @@ function Add-SrirachaToolIconRequest {
     try {
         $bitmap = New-Object Windows.Media.Imaging.BitmapImage
         $bitmap.BeginInit()
-        $bitmap.UriSource = [uri]$source.Url
+        $bitmap.UriSource = [uri]$Url
         # Deliberately no OnLoad here: that would force a synchronous download and
-        # stall the UI thread once per app
+        # stall the UI thread once per image
         $bitmap.EndInit()
 
         # Carry the destination on the bitmap so the completion handler knows where to write
@@ -539,7 +618,7 @@ function Add-SrirachaToolIconRequest {
                 $downloaded = $args[0]
                 try {
                     $downloaded.IconImage.Visibility = "Visible"
-                    $downloaded.IconFallback.Visibility = "Collapsed"
+                    if ($downloaded.IconFallback) { $downloaded.IconFallback.Visibility = "Collapsed" }
 
                     $cacheDir = Split-Path $downloaded.CacheTarget -Parent
                     if (-not (Test-Path $cacheDir)) { $null = New-Item -Path $cacheDir -ItemType Directory -Force }
@@ -563,7 +642,7 @@ function Add-SrirachaToolIconRequest {
         $Image.Source = $bitmap
     }
     catch {
-        Write-Debug "Unable to request icon for $Link : $($_.Exception.Message)"
+        Write-Debug "Unable to request image from $Url : $($_.Exception.Message)"
     }
 }
 function Get-SrirachaToolWindowStatePath {
@@ -14746,12 +14825,6 @@ $inputXML = @'
                                 </StackPanel>
                             </Button>
 
-                            <Button Name="CommunityButton" Style="{StaticResource GlassButton}" Margin="0,5" Background="Transparent" HorizontalContentAlignment="Left" BorderThickness="0" Visibility="Collapsed" ToolTip="Opens the Sriracha Gang Discord in your browser">
-                                <StackPanel Orientation="Horizontal">
-                                    <Path Data="{StaticResource IconFlame}" Style="{StaticResource LucideIcon}"/>
-                                    <TextBlock Text="Sriracha Gang" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -14877,7 +14950,13 @@ $inputXML = @'
                                     </Grid>
                                     
                                     <!-- System Overview (Neofetch-Style) -->
-                                    <Border Grid.Row="2" Background="{StaticResource GlassLight}" CornerRadius="12" Padding="20">
+                                    <!-- Row 2: system overview beside the community card -->
+                                    <Grid Grid.Row="2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Margin="0,0,10,0" Background="{StaticResource GlassLight}" CornerRadius="12" Padding="20">
                                         <StackPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                                                 <TextBlock Text="System Overview" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
@@ -14942,6 +15021,44 @@ $inputXML = @'
                                             </Grid>
                                         </StackPanel>
                                     </Border>
+                                        <!-- Community card. Server name, avatar, banner and member counts are
+                                             fetched from the public invite at runtime; it degrades to a plain
+                                             Join button when offline. -->
+                                        <Border Name="CommunityCard" Grid.Column="1" Width="300" VerticalAlignment="Top" Background="{StaticResource GlassLight}" CornerRadius="12" Visibility="Collapsed">
+                                            <StackPanel>
+                                                <Grid Height="90">
+                                                    <Border Background="{StaticResource GlassMedium}" CornerRadius="12,12,0,0"/>
+                                                    <Image Name="CommunityBanner" Stretch="UniformToFill" Visibility="Collapsed"/>
+                                                </Grid>
+                                                <Grid Margin="16,0,16,16">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Grid.Column="0" Width="56" Height="56" CornerRadius="28" Margin="0,-28,12,0" VerticalAlignment="Top" Background="{StaticResource BgBase}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="2">
+                                                        <Grid>
+                                                            <Path Data="{StaticResource IconFlame}" Stroke="{StaticResource Accent}" StrokeThickness="2" Stretch="Uniform" Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            <Image Name="CommunityIcon" Stretch="UniformToFill" Visibility="Collapsed">
+                                                                <Image.Clip>
+                                                                    <EllipseGeometry Center="26,26" RadiusX="26" RadiusY="26"/>
+                                                                </Image.Clip>
+                                                            </Image>
+                                                        </Grid>
+                                                    </Border>
+                                                    <StackPanel Grid.Column="1" Margin="0,8,0,0">
+                                                        <TextBlock Name="CommunityName" Text="Sriracha Gang" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                                        <StackPanel Name="CommunityCounts" Orientation="Horizontal" Margin="0,4,0,0" Visibility="Collapsed">
+                                                            <Ellipse Width="8" Height="8" Fill="{StaticResource Success}" VerticalAlignment="Center"/>
+                                                            <TextBlock Name="CommunityOnline" Margin="6,0,0,0" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                                            <Ellipse Width="8" Height="8" Fill="{StaticResource TextSecondary}" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                                            <TextBlock Name="CommunityMembers" Margin="6,0,0,0" FontSize="11" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                        <Button Name="CommunityJoin" Content="Join the Discord" Style="{StaticResource ActionButtonPrimary}" HorizontalAlignment="Left" Margin="0,12,0,0" ToolTip="Opens the Sriracha Gang invite in your browser"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
                                 </Grid>
                             </ScrollViewer>
                         </TabItem>
@@ -15474,13 +15591,16 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { $sync["$("$($psitem.Name)")"]
 # Point the long-standing selected-apps helpers at the sidebar panel
 $sync.selectedAppsStackPanel = $sync["SelectedAppsList"]
 
-# Community link. Shown only when a URL is actually configured.
-if ($sync.CommunityButton -and -not [string]::IsNullOrWhiteSpace($sync.CommunityUrl)) {
-    $sync.CommunityButton.Visibility = "Visible"
-    $sync.CommunityButton.Add_Click({
-            try { Start-Process $sync.CommunityUrl }
-            catch { Write-Warning "Unable to open $($sync.CommunityUrl): $($_.Exception.Message)" }
-        })
+# Community card. Shown only when an invite is actually configured.
+if ($sync.CommunityCard -and -not [string]::IsNullOrWhiteSpace($sync.CommunityUrl)) {
+    $sync.CommunityCard.Visibility = "Visible"
+    if ($sync.CommunityJoin) {
+        $sync.CommunityJoin.Add_Click({
+                try { Start-Process $sync.CommunityUrl }
+                catch { Write-Warning "Unable to open $($sync.CommunityUrl): $($_.Exception.Message)" }
+            })
+    }
+    Update-SrirachaToolCommunityCard
 }
 if ($sync.SelectedAppsClear) {
     $sync.SelectedAppsClear.Add_Click({
