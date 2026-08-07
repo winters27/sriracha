@@ -30,6 +30,9 @@ Add-Type -AssemblyName System.Windows.Forms
 $sync = [Hashtable]::Synchronized(@{})
 $sync.PSScriptRoot = $PSScriptRoot
 $sync.version = "26.08.06"
+# Community invite. Blank this out and the sidebar button hides itself rather than
+# opening something broken.
+$sync.CommunityUrl = "https://discord.gg/sriracha"
 $sync.configs = @{}
 $sync.Buttons = [System.Collections.Generic.List[PSObject]]::new()
 $sync.ProcessRunning = $false
@@ -14742,6 +14745,13 @@ $inputXML = @'
                                     <TextBlock Text="Config File" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
+
+                            <Button Name="CommunityButton" Style="{StaticResource GlassButton}" Margin="0,5" Background="Transparent" HorizontalContentAlignment="Left" BorderThickness="0" Visibility="Collapsed" ToolTip="Opens the Sriracha Gang Discord in your browser">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Data="{StaticResource IconFlame}" Style="{StaticResource LucideIcon}"/>
+                                    <TextBlock Text="Sriracha Gang" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -15463,6 +15473,15 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { $sync["$("$($psitem.Name)")"]
 
 # Point the long-standing selected-apps helpers at the sidebar panel
 $sync.selectedAppsStackPanel = $sync["SelectedAppsList"]
+
+# Community link. Shown only when a URL is actually configured.
+if ($sync.CommunityButton -and -not [string]::IsNullOrWhiteSpace($sync.CommunityUrl)) {
+    $sync.CommunityButton.Visibility = "Visible"
+    $sync.CommunityButton.Add_Click({
+            try { Start-Process $sync.CommunityUrl }
+            catch { Write-Warning "Unable to open $($sync.CommunityUrl): $($_.Exception.Message)" }
+        })
+}
 if ($sync.SelectedAppsClear) {
     $sync.SelectedAppsClear.Add_Click({
             # Copy first: unchecking mutates the collection this loop reads from
