@@ -10385,9 +10385,7 @@ $sync.configs.preset = @'
     "WPFTweaksServices",
     "WPFTweaksDVR",
     "WPFTweaksDisableLMS1",
-    "WPFTweaksRemoveCopilot",
-    "WPFTweaksRecallOff",
-    "WPFTweaksDisablePaintNotepadAI",
+    "WPFTweaksWindowsAI",
     "WPFTweaksWPBT",
     "WPFTweaksDeBloat",
     "WPFTweaksRemoveOnedrive",
@@ -11355,50 +11353,27 @@ $sync.configs.tweaks = @'
     ],
     "link": "https://christitustech.github.io/winutil/dev/tweaks/z--Advanced-Tweaks---CAUTION/RemoveEdge"
   },
-  "WPFTweaksRemoveCopilot": {
-    "Content": "Disable Microsoft Copilot",
-    "Description": "Disables MS Copilot AI built into Windows since 23H2.",
+  "WPFTweaksWindowsAI": {
+    "Content": "Disable and Remove Windows AI",
+    "Description": "Disables and removes Windows AI features: Copilot, Recall, and CoreAI (blocked from reinstall by Windows Update), plus Cocreator, Generative Fill and Image Creator in Paint and the AI features in Notepad.",
     "category": "z__Advanced Tweaks - CAUTION",
     "panel": "1",
     "Order": "a025_",
     "registry": [
       {
-        "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsCopilot",
-        "Name": "TurnOffWindowsCopilot",
+        "Path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer",
+        "Name": "SettingsPageVisibility",
+        "Type": "String",
+        "Value": "hide:aicomponents",
+        "OriginalValue": "<RemoveEntry>"
+      },
+      {
+        "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI",
+        "Name": "DisableAIDataAnalysis",
         "Type": "DWord",
         "Value": "1",
         "OriginalValue": "<RemoveEntry>"
       },
-      {
-        "Path": "HKCU:\\Software\\Policies\\Microsoft\\Windows\\WindowsCopilot",
-        "Name": "TurnOffWindowsCopilot",
-        "Type": "DWord",
-        "Value": "1",
-        "OriginalValue": "<RemoveEntry>"
-      },
-      {
-        "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
-        "Name": "ShowCopilotButton",
-        "Type": "DWord",
-        "Value": "0",
-        "OriginalValue": "1"
-      }
-    ],
-    "InvokeScript": [
-      "\r\n      Write-Host \"Remove Copilot\"\r\n      dism /online /remove-package /package-name:Microsoft.Windows.Copilot\r\n      "
-    ],
-    "UndoScript": [
-      "\r\n      Write-Host \"Install Copilot\"\r\n      dism /online /add-package /package-name:Microsoft.Windows.Copilot\r\n      "
-    ],
-    "link": "https://christitustech.github.io/winutil/dev/tweaks/z--Advanced-Tweaks---CAUTION/RemoveCopilot"
-  },
-  "WPFTweaksDisablePaintNotepadAI": {
-    "Content": "Disable Paint and Notepad AI",
-    "Description": "Disables Cocreator, Generative Fill and Image Creator in Paint, plus the Copilot AI features in Notepad.",
-    "category": "z__Advanced Tweaks - CAUTION",
-    "panel": "1",
-    "Order": "a026_",
-    "registry": [
       {
         "Path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Paint",
         "Name": "DisableCocreator",
@@ -11428,7 +11403,13 @@ $sync.configs.tweaks = @'
         "OriginalValue": "<RemoveEntry>"
       }
     ],
-    "link": "https://winutil.christitus.com/dev/tweaks/z--advanced-tweaks---caution/windowsai"
+    "InvokeScript": [
+      "\r\n      $Appx = & powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"(Get-AppxPackage -AllUsers -Name 'MicrosoftWindows.Client.CoreAI').PackageFullName\" | Select-Object -Last 1\r\n      $Sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value\r\n\r\n      if ($Appx) {\r\n          # Marking the package EndOfLife stops Windows Update from reinstalling CoreAI\r\n          New-Item \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Appx\\AppxAllUserStore\\EndOfLife\\$Sid\\$Appx\" -Force\r\n      }\r\n\r\n      powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"*Copilot*\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue'\r\n      winget uninstall -e --name \"Copilot\" --silent --force --accept-source-agreements 2>$null\r\n      powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'Get-AppxPackage -AllUsers -Name \"Microsoft.MicrosoftOfficeHub\" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue'\r\n\r\n      if ($Appx) {\r\n          powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"Remove-AppxPackage -Package '$Appx' -ErrorAction SilentlyContinue\"\r\n      }\r\n\r\n      Set-Service -Name WSAIFabricSvc -StartupType Disabled -ErrorAction SilentlyContinue\r\n      Disable-WindowsOptionalFeature -FeatureName Recall -Online -NoRestart -ErrorAction SilentlyContinue\r\n\r\n      Write-Host \"Windows AI Disabled\"\r\n      "
+    ],
+    "UndoScript": [
+      "\r\n      $Sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value\r\n      Get-ChildItem \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Appx\\AppxAllUserStore\\EndOfLife\\$Sid\" -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -like 'MicrosoftWindows.Client.CoreAI*' } | Remove-Item -Recurse -ErrorAction SilentlyContinue\r\n\r\n      winget install -e --name \"Microsoft Copilot\" --silent --accept-source-agreements --accept-package-agreements\r\n      Set-Service -Name WSAIFabricSvc -StartupType Manual -ErrorAction SilentlyContinue\r\n      Enable-WindowsOptionalFeature -FeatureName Recall -Online -NoRestart -ErrorAction SilentlyContinue\r\n\r\n      Write-Host \"Windows AI restore attempted; some packages may need a reinstall from the Microsoft Store\"\r\n      "
+    ],
+    "link": "https://winutil.christitus.com/code-reference/tweaks/z--advanced-tweaks---caution/windowsai"
   },
   "WPFTweaksWPBT": {
     "Content": "Disable Windows Platform Binary Table (WPBT)",
@@ -11446,29 +11427,6 @@ $sync.configs.tweaks = @'
       }
     ],
     "link": "https://winutil.christitus.com/dev/tweaks/essential-tweaks/wpbt"
-  },
-  "WPFTweaksRecallOff": {
-    "Content": "Disable Recall",
-    "Description": "Turn Recall off",
-    "category": "Essential Tweaks",
-    "panel": "1",
-    "Order": "a011_",
-    "registry": [
-      {
-        "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI",
-        "Name": "DisableAIDataAnalysis",
-        "Type": "DWord",
-        "Value": "1",
-        "OriginalValue": "<RemoveEntry>"
-      }
-    ],
-    "InvokeScript": [
-      "\r\n      Write-Host \"Disable Recall\"\r\n      DISM /Online /Disable-Feature /FeatureName:Recall\r\n      "
-    ],
-    "UndoScript": [
-      "\r\n      Write-Host \"Enable Recall\"\r\n      DISM /Online /Enable-Feature /FeatureName:Recall\r\n      "
-    ],
-    "link": "https://christitustech.github.io/winutil/dev/tweaks/Essential-Tweaks/DisableRecall"
   },
   "WPFTweaksDisableLMS1": {
     "Content": "Disable Intel MM (vPro LMS)",
