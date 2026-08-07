@@ -14819,7 +14819,7 @@ $inputXML = @'
                                     <!-- Welcome Header -->
                                     <StackPanel Margin="0,0,0,20">
                                         <TextBlock Name="WelcomeText" Text="Welcome back." FontSize="28" Foreground="{StaticResource TextPrimary}" FontWeight="Bold"/>
-                                        <TextBlock Text="System status: Optimal" FontSize="14" Foreground="{StaticResource TextSecondary}" Margin="0,5,0,0"/>
+                                        <TextBlock Name="DashboardSubtitle" Text="Pick a section below to get started." FontSize="14" Foreground="{StaticResource TextSecondary}" Margin="0,5,0,0"/>
                                     </StackPanel>
 
                                     <!-- Quick Actions Cards -->
@@ -14834,18 +14834,18 @@ $inputXML = @'
                                         <Border Grid.Column="0" Background="{StaticResource GlassMedium}" CornerRadius="12" Padding="20" Margin="0,0,10,0">
                                             <StackPanel>
                                                 <Path Data="{StaticResource IconRocket}" Stroke="{StaticResource Accent}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="Uniform" Width="24" Height="24" Margin="0,0,0,10"/>
-                                                <TextBlock Text="Install Essentials" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
-                                                <TextBlock Text="Get chrome, discord, steam..." FontSize="12" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" Margin="0,5,0,15"/>
-                                                <Button x:Name="BtnQuickInstall" Content="Start" Style="{StaticResource GlassButton}" HorizontalAlignment="Left"/>
+                                                <TextBlock Text="Browse Apps" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
+                                                <TextBlock Name="QuickInstallDesc" Text="Browse the catalog and install what you need." FontSize="12" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" Margin="0,5,0,15"/>
+                                                <Button x:Name="BtnQuickInstall" Content="Open Apps" Style="{StaticResource GlassButton}" HorizontalAlignment="Left" ToolTip="Goes to the Apps tab. Nothing is installed until you choose apps and press Install."/>
                                             </StackPanel>
                                         </Border>
                                          <!-- Quick Action 2 -->
                                         <Border Grid.Column="1" Background="{StaticResource GlassMedium}" CornerRadius="12" Padding="20" Margin="5,0,5,0">
                                             <StackPanel>
                                                 <Path Data="{StaticResource IconShield}" Stroke="{StaticResource Accent}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="Uniform" Width="24" Height="24" Margin="0,0,0,10"/>
-                                                <TextBlock Text="Privacy Fix" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
-                                                <TextBlock Text="Disable telemetry &amp; tracking" FontSize="12" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" Margin="0,5,0,15"/>
-                                                <Button x:Name="BtnQuickTweaks" Content="Fix Now" Style="{StaticResource GlassButton}" HorizontalAlignment="Left"/>
+                                                <TextBlock Text="Privacy &amp; Tweaks" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
+                                                <TextBlock Name="QuickTweaksDesc" Text="Review telemetry, tracking and performance options." FontSize="12" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" Margin="0,5,0,15"/>
+                                                <Button x:Name="BtnQuickTweaks" Content="Open Tweaks" Style="{StaticResource GlassButton}" HorizontalAlignment="Left" ToolTip="Goes to the Tweaks tab. Nothing changes until you tick options and press Apply Tweaks."/>
                                             </StackPanel>
                                         </Border>
                                          <!-- Quick Action 3 -->
@@ -14853,8 +14853,8 @@ $inputXML = @'
                                             <StackPanel>
                                                 <Path Data="{StaticResource IconMicrosoftSquares}" Fill="{StaticResource Accent}" Stretch="Uniform" Width="24" Height="24" Margin="0,0,0,10"/>
                                                 <TextBlock Text="Activate Windows" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
-                                                <TextBlock Text="License your Windows installation" FontSize="12" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" Margin="0,5,0,15"/>
-                                                <Button x:Name="BtnQuickActivator" Content="Activate" Style="{StaticResource GlassButton}" HorizontalAlignment="Left"/>
+                                                <TextBlock Text="License your Windows installation." FontSize="12" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" Margin="0,5,0,15"/>
+                                                <Button x:Name="BtnQuickActivator" Content="Open Activator" Style="{StaticResource GlassButton}" HorizontalAlignment="Left" ToolTip="Goes to the Activator tab. Nothing runs until you choose an option there."/>
                                             </StackPanel>
                                         </Border>
                                     </Grid>
@@ -15520,6 +15520,21 @@ if (-not $userName) { $userName = "User" }
 
 if ($sync.WelcomeText) {
     $sync.WelcomeText.Text = "Welcome back, $userName."
+}
+
+# Fill the dashboard card counts from the real catalog rather than hardcoding numbers
+# that quietly go stale. The subtitle used to claim "System status: Optimal" on every
+# machine regardless of state, which was simply not a fact we had.
+$appCount = @($sync.configs.applications.PSObject.Properties).Count
+$tweakCount = @($sync.configs.tweaks.PSObject.Properties).Count
+if ($sync.QuickInstallDesc) {
+    $sync.QuickInstallDesc.Text = "$appCount apps to choose from, browsers to dev tools."
+}
+if ($sync.QuickTweaksDesc) {
+    $sync.QuickTweaksDesc.Text = "$tweakCount options for privacy, cleanup and performance."
+}
+if ($sync.DashboardSubtitle) {
+    $sync.DashboardSubtitle.Text = "Pick a section below to get started. Nothing changes until you confirm it."
 }
 
 Invoke-WPFRunspace -ScriptBlock {
