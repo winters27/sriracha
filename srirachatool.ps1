@@ -13944,7 +13944,7 @@ $inputXML = @'
                                                FontFamily="{StaticResource SatoshiFont}" Margin="0,2,0,4"/>
                                     <Border Background="#1AE74C3C" CornerRadius="4" Padding="6,2" 
                                             HorizontalAlignment="Left">
-                                        <TextBlock x:Name="VersionBadge" Text="v25.12.28" FontSize="10" 
+                                        <TextBlock x:Name="VersionBadge" Text="v26.08.06" FontSize="10"
                                                    FontWeight="Medium" Foreground="#E74C3C" 
                                                    FontFamily="{StaticResource SatoshiFont}"/>
                                     </Border>
@@ -14975,6 +14975,8 @@ Set-SrirachaToolTaskbaritem -state "None"
 
 # Set the titlebar
 $sync["Form"].title = $sync["Form"].title + " " + $sync.version
+# Drive the sidebar badge from $sync.version so it cannot drift from the real version
+if ($sync["VersionBadge"]) { $sync["VersionBadge"].Text = "v" + $sync.version }
 # Set the commands that will run when the form is closed
 $sync["Form"].Add_Closing({
         $sync.runspace.Dispose()
