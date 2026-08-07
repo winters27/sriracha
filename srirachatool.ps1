@@ -139,8 +139,35 @@ function Add-SelectedAppsMenuItem {
     $selectedAppGrid = New-Object Windows.Controls.Grid
     $selectedAppGrid.Margin = "0,1,0,1"
 
+    $selectedAppGrid.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition -Property @{Width = "Auto" }))
     $selectedAppGrid.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition -Property @{Width = "*" }))
     $selectedAppGrid.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition -Property @{Width = "Auto" }))
+
+    # Same icon treatment as the app cards, just smaller, and served from the same cache
+    $iconHost = New-Object Windows.Controls.Grid
+    $iconHost.Width = 16
+    $iconHost.Height = 16
+    $iconHost.Margin = "0,0,8,0"
+    $iconHost.VerticalAlignment = "Center"
+
+    $iconFallback = New-Object Windows.Controls.TextBlock
+    $iconFallback.Text = ("$name".TrimStart(".") + "?").Substring(0, 1).ToUpper()
+    $iconFallback.FontWeight = "Bold"
+    $iconFallback.FontSize = 10
+    $iconFallback.HorizontalAlignment = "Center"
+    $iconFallback.VerticalAlignment = "Center"
+    $iconFallback.SetResourceReference([Windows.Controls.TextBlock]::ForegroundProperty, "TextSecondary")
+    $iconHost.Children.Add($iconFallback) | Out-Null
+
+    $iconImage = New-Object Windows.Controls.Image
+    $iconImage.Stretch = "Uniform"
+    $iconImage.Visibility = "Collapsed"
+    $iconHost.Children.Add($iconImage) | Out-Null
+
+    [System.Windows.Controls.Grid]::SetColumn($iconHost, 0)
+    $selectedAppGrid.Children.Add($iconHost)
+
+    Add-SrirachaToolIconRequest -Image $iconImage -Fallback $iconFallback -Link $sync.configs.applicationsHashtable.$key.link
 
     # The sidebar is narrow, so long names are trimmed and the full name lives in the tooltip
     $selectedAppLabel = New-Object Windows.Controls.TextBlock
@@ -151,7 +178,7 @@ function Add-SelectedAppsMenuItem {
     $selectedAppLabel.VerticalAlignment = "Center"
     $selectedAppLabel.HorizontalAlignment = "Left"
     $selectedAppLabel.SetResourceReference([Windows.Controls.TextBlock]::ForegroundProperty, "TextPrimary")
-    [System.Windows.Controls.Grid]::SetColumn($selectedAppLabel, 0)
+    [System.Windows.Controls.Grid]::SetColumn($selectedAppLabel, 1)
     $selectedAppGrid.Children.Add($selectedAppLabel)
 
     $selectedAppRemoveButton = New-Object Windows.Controls.Button
@@ -160,27 +187,14 @@ function Add-SelectedAppsMenuItem {
     $selectedAppRemoveButton.Height = 18
     $selectedAppRemoveButton.FontSize = 11
     $selectedAppRemoveButton.Padding = "0"
-    $selectedAppRemoveButton.Background = "Transparent"
-    $selectedAppRemoveButton.BorderThickness = "0"
-    $selectedAppRemoveButton.Cursor = "Hand"
     $selectedAppRemoveButton.Tag = $key
     $selectedAppRemoveButton.ToolTip = "Remove the App from Selection"
-    $selectedAppRemoveButton.SetResourceReference([Windows.Controls.Control]::ForegroundProperty, "TextSecondary")
+    $selectedAppRemoveButton.SetResourceReference([Windows.Controls.Control]::StyleProperty, "SelectedAppRemoveStyle")
 
-    # Bare template so the button reads as an inline affordance rather than a chip
-    $template = [Windows.Markup.XamlReader]::Parse(
-        '<ControlTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" TargetType="Button">' +
-        '<Border Background="Transparent"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>' +
-        '</ControlTemplate>')
-    $selectedAppRemoveButton.Template = $template
-
-    # Highlight the Remove icon on Hover
-    $selectedAppRemoveButton.Add_MouseEnter({ $this.SetResourceReference([Windows.Controls.Control]::ForegroundProperty, "Danger") })
-    $selectedAppRemoveButton.Add_MouseLeave({ $this.SetResourceReference([Windows.Controls.Control]::ForegroundProperty, "TextSecondary") })
     $selectedAppRemoveButton.Add_Click({
             $sync.($this.Tag).isChecked = $false # On click of the remove button, we only have to uncheck the corresponding checkbox. This will kick of all necessary changes to update the UI
         })
-    [System.Windows.Controls.Grid]::SetColumn($selectedAppRemoveButton, 1)
+    [System.Windows.Controls.Grid]::SetColumn($selectedAppRemoveButton, 2)
     $selectedAppGrid.Children.Add($selectedAppRemoveButton)
     $sync.selectedAppsstackPanel.Children.Add($selectedAppGrid)
 }
@@ -13981,6 +13995,49 @@ $inputXML = @'
             </Setter>
         </Style>
 
+        <!-- Remove button on a selected-app row: quiet until hovered, then reads as destructive -->
+        <Style x:Key="SelectedAppRemoveStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="RemoveBorder" Background="Transparent" CornerRadius="4" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RemoveBorder" Property="Background" Value="#33FF4444"/>
+                                <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Small text action in the sidebar, e.g. Clear -->
+        <Style x:Key="SidebarLinkButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="LinkBorder" Background="Transparent" CornerRadius="4" Padding="6,2" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="LinkBorder" Property="Background" Value="{StaticResource GlassHover}"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- App card: the whole card is the checkbox, so a click anywhere selects the app -->
         <Style x:Key="AppCardStyle" TargetType="CheckBox">
             <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
@@ -14482,16 +14539,7 @@ $inputXML = @'
                                     </Border>
                                 </StackPanel>
                                 <Button Name="SelectedAppsClear" Content="Clear" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                        Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="4,0"
-                                        FontSize="11" Foreground="{StaticResource TextSecondary}" ToolTip="Clear the whole selection">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="Transparent" Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                </Button>
+                                        Style="{StaticResource SidebarLinkButtonStyle}" ToolTip="Clear the whole selection"/>
                             </Grid>
 
                             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
