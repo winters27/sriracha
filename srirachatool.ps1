@@ -252,6 +252,269 @@ Function Get-SrirachaToolCheckBoxes {
     }
     return  $Output
 }
+function Get-SrirachaToolIconSource {
+    <#
+
+    .SYNOPSIS
+        Works out where an app's brand icon is cached and where to fetch it from.
+
+    .DESCRIPTION
+        Returns a CachePath and Url for the given app link, or $null if the link is unusable.
+        Icons are keyed by their source so apps sharing an origin share one cached file.
+        Projects hosted on GitHub resolve to the owner's avatar, which is nearly always the
+        real project logo; the plain favicon would give all of them the same GitHub mark.
+
+    #>
+
+    param (
+        [string]$Link
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Link)) { return $null }
+
+    try {
+        $uri = [uri]$Link
+        $linkHost = $uri.Host
+    }
+    catch {
+        return $null
+    }
+    if ([string]::IsNullOrWhiteSpace($linkHost)) { return $null }
+
+    $cacheDir = "$env:LOCALAPPDATA\srirachatool\icons"
+
+    if ($linkHost -match '(^|\.)github\.com$') {
+        $owner = ($uri.Segments | Select-Object -Skip 1 -First 1)
+        if ($owner) {
+            $owner = $owner.Trim('/')
+            if ($owner -match '^[A-Za-z0-9][A-Za-z0-9\-]*$') {
+                return [PSCustomObject]@{
+                    CachePath = Join-Path $cacheDir "github_$($owner.ToLower()).png"
+                    Url       = "https://github.com/$owner.png?size=64"
+                }
+            }
+        }
+    }
+
+    $safe = $linkHost.ToLower() -replace '[^a-z0-9\.\-]', '_'
+    return [PSCustomObject]@{
+        CachePath = Join-Path $cacheDir "$safe.png"
+        Url       = "https://www.google.com/s2/favicons?sz=64&domain_url=$([uri]::EscapeDataString($Link))"
+    }
+}
+function Add-SrirachaToolIconRequest {
+    <#
+
+    .SYNOPSIS
+        Loads an app icon from the local cache, or queues it to be fetched in the background.
+
+    .DESCRIPTION
+        Cached icons load straight off disk so the Apps tab never waits on the network.
+        Anything missing is queued and downloaded once by a single background worker,
+        which writes it to the cache and then fills in the image on the UI thread.
+
+    #>
+
+    param (
+        [Windows.Controls.Image]$Image,
+        [Windows.Controls.TextBlock]$Fallback,
+        [string]$Link
+    )
+
+    $source = Get-SrirachaToolIconSource -Link $Link
+    if (-not $source) { return }
+    $cachePath = $source.CachePath
+
+    if (Test-Path $cachePath) {
+        try {
+            $bitmap = New-Object Windows.Media.Imaging.BitmapImage
+            $bitmap.BeginInit()
+            # OnLoad reads the bytes immediately and releases the file, so the cache stays writable
+            $bitmap.CacheOption = [Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+            $bitmap.UriSource = [uri]$cachePath
+            $bitmap.EndInit()
+            $Image.Source = $bitmap
+            $Image.Visibility = "Visible"
+            $Fallback.Visibility = "Collapsed"
+            return
+        }
+        catch {
+            # A truncated or corrupt cache file should not kill the entry; refetch it
+            Remove-Item $cachePath -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    $null = $sync.IconQueue.Add([PSCustomObject]@{
+            Image     = $Image
+            Fallback  = $Fallback
+            CachePath = $cachePath
+            Url       = $source.Url
+        })
+}
+function Start-SrirachaToolIconFetch {
+    <#
+
+    .SYNOPSIS
+        Drains the queued icon requests on a background thread, one shared worker for the whole tab.
+
+    #>
+
+    if (-not $sync.IconQueue -or $sync.IconQueue.Count -eq 0) { return }
+    if ($sync.IconFetchRunning) { return }
+    $sync.IconFetchRunning = $true
+
+    $requests = @($sync.IconQueue)
+    $sync.IconQueue = [System.Collections.ArrayList]::Synchronized([System.Collections.ArrayList]::new())
+
+    Invoke-WPFRunspace -ParameterList @(, ("requests", $requests)) -ScriptBlock {
+        param($requests)
+
+        $cacheDir = "$env:LOCALAPPDATA\srirachatool\icons"
+        if (-not (Test-Path $cacheDir)) { $null = New-Item -Path $cacheDir -ItemType Directory -Force }
+
+        # One file per host, so collapse duplicates before hitting the network
+        $byPath = @{}
+        foreach ($request in $requests) {
+            if (-not $byPath.ContainsKey($request.CachePath)) { $byPath[$request.CachePath] = @() }
+            $byPath[$request.CachePath] += $request
+        }
+
+        foreach ($cachePath in $byPath.Keys) {
+            $group = $byPath[$cachePath]
+            try {
+                if (-not (Test-Path $cachePath)) {
+                    Invoke-WebRequest -Uri $group[0].Url -OutFile $cachePath -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
+                }
+
+                if ((Get-Item $cachePath -ErrorAction Stop).Length -lt 64) {
+                    # Too small to be a real icon; keep the letter fallback instead
+                    Remove-Item $cachePath -Force -ErrorAction SilentlyContinue
+                    continue
+                }
+
+                foreach ($request in $group) {
+                    $sync.Form.Dispatcher.Invoke([action] {
+                            try {
+                                $bitmap = New-Object Windows.Media.Imaging.BitmapImage
+                                $bitmap.BeginInit()
+                                $bitmap.CacheOption = [Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+                                $bitmap.UriSource = [uri]$request.CachePath
+                                $bitmap.EndInit()
+                                $request.Image.Source = $bitmap
+                                $request.Image.Visibility = "Visible"
+                                $request.Fallback.Visibility = "Collapsed"
+                            }
+                            catch {
+                                Write-Debug "Unable to apply icon: $($_.Exception.Message)"
+                            }
+                        })
+                }
+            }
+            catch {
+                # Offline, blocked, or no favicon: the letter fallback is already on screen
+                Remove-Item $cachePath -Force -ErrorAction SilentlyContinue
+                Write-Debug "Icon fetch failed for $($group[0].Url): $($_.Exception.Message)"
+            }
+        }
+
+        $sync.IconFetchRunning = $false
+    }
+}
+function Get-SrirachaToolWindowStatePath {
+    return "$env:LOCALAPPDATA\srirachatool\window.ini"
+}
+function Save-SrirachaToolWindowState {
+    <#
+
+    .SYNOPSIS
+        Saves the window size, position and maximized state so the next launch reopens the same way.
+
+    #>
+
+    try {
+        $form = $sync["Form"]
+        if (-not $form) { return }
+
+        # RestoreBounds holds the pre-maximize geometry, so a maximized window still restores sensibly
+        $maximized = ($form.WindowState -eq [System.Windows.WindowState]::Maximized)
+        if ($maximized -and -not [double]::IsNaN($form.RestoreBounds.Width) -and $form.RestoreBounds.Width -gt 0) {
+            $left = $form.RestoreBounds.Left; $top = $form.RestoreBounds.Top
+            $width = $form.RestoreBounds.Width; $height = $form.RestoreBounds.Height
+        }
+        else {
+            $left = $form.Left; $top = $form.Top
+            $width = $form.Width; $height = $form.Height
+        }
+
+        if ([double]::IsNaN($width) -or [double]::IsNaN($height) -or $width -le 0 -or $height -le 0) { return }
+
+        $statePath = Get-SrirachaToolWindowStatePath
+        $stateDir = Split-Path $statePath -Parent
+        if (-not (Test-Path $stateDir)) { $null = New-Item -Path $stateDir -ItemType Directory -Force }
+
+        $content = @(
+            "Left=$([int]$left)"
+            "Top=$([int]$top)"
+            "Width=$([int]$width)"
+            "Height=$([int]$height)"
+            "Maximized=$maximized"
+        ) -join "`r`n"
+        [System.IO.File]::WriteAllText($statePath, $content, [System.Text.UTF8Encoding]::new($false))
+    }
+    catch {
+        Write-Debug "Unable to save window state: $($_.Exception.Message)"
+    }
+}
+function Restore-SrirachaToolWindowState {
+    <#
+
+    .SYNOPSIS
+        Restores the saved window geometry, clamped to a monitor that actually exists right now.
+
+    #>
+
+    try {
+        $statePath = Get-SrirachaToolWindowStatePath
+        if (-not (Test-Path $statePath)) { return }
+
+        $state = @{}
+        foreach ($line in (Get-Content $statePath -ErrorAction Stop)) {
+            $pair = $line -split '=', 2
+            if ($pair.Count -eq 2) { $state[$pair[0].Trim()] = $pair[1].Trim() }
+        }
+
+        $form = $sync["Form"]
+        [double]$width = 0; [double]$height = 0
+        if (-not [double]::TryParse($state["Width"], [ref]$width)) { return }
+        if (-not [double]::TryParse($state["Height"], [ref]$height)) { return }
+        if ($width -lt $form.MinWidth -or $height -lt $form.MinHeight) { return }
+
+        [double]$left = 0; [double]$top = 0
+        $hasPosition = ([double]::TryParse($state["Left"], [ref]$left) -and [double]::TryParse($state["Top"], [ref]$top))
+
+        Add-Type -AssemblyName System.Windows.Forms
+        if ($hasPosition) {
+            # Drop a saved position that is no longer on any connected display (monitor unplugged)
+            $point = New-Object System.Drawing.Point([int]$left, [int]$top)
+            $onScreen = [System.Windows.Forms.Screen]::AllScreens | Where-Object { $_.WorkingArea.Contains($point) }
+            if ($onScreen) {
+                $form.WindowStartupLocation = [System.Windows.WindowStartupLocation]::Manual
+                $form.Left = $left
+                $form.Top = $top
+            }
+        }
+
+        $form.Width = $width
+        $form.Height = $height
+
+        if ($state["Maximized"] -eq "True") {
+            $form.WindowState = [System.Windows.WindowState]::Maximized
+        }
+    }
+    catch {
+        Write-Debug "Unable to restore window state: $($_.Exception.Message)"
+    }
+}
 function Get-SrirachaToolInstallerProcess {
     <#
 
@@ -5226,6 +5489,10 @@ function Invoke-WPFUIElements {
     if ($targetGridName -eq "appspanel") {
         # Get the CategoryExpanderStyle
         $categoryExpanderStyle = $window.FindResource("CategoryExpanderStyle")
+        $appCardStyle = $window.FindResource("AppCardStyle")
+        if (-not $sync.IconQueue) {
+            $sync.IconQueue = [System.Collections.ArrayList]::Synchronized([System.Collections.ArrayList]::new())
+        }
         
         # Create a WrapPanel that stretches to fill parent width
         $categoryGrid = New-Object Windows.Controls.WrapPanel
@@ -5266,7 +5533,7 @@ function Invoke-WPFUIElements {
                 $expander = New-Object Windows.Controls.Expander
                 $expander.IsExpanded = $false
                 # Width of 240px to better fill the container
-                $expander.Width = 240
+                $expander.Width = 340
                 $expander.HorizontalAlignment = "Left"
                 $expander.VerticalAlignment = "Top"
                 $expander.HorizontalContentAlignment = "Stretch"
@@ -5299,9 +5566,9 @@ function Invoke-WPFUIElements {
                 # Create WrapPanel for items inside the Expander
                 $wrapPanel = New-Object Windows.Controls.WrapPanel
                 $wrapPanel.Orientation = "Horizontal"
-                $wrapPanel.ItemWidth = 230
+                $wrapPanel.ItemWidth = 320
                 # Note: No ItemHeight set - allows collapsed items to take 0 height
-                
+
                 # Sort entries by Order and then by Name
                 $sortedEntries = $entries | Sort-Object Order, Name
                 foreach ($entryInfo in $sortedEntries) {
@@ -5309,24 +5576,59 @@ function Invoke-WPFUIElements {
                     $horizontalStackPanel = New-Object Windows.Controls.StackPanel
                     $horizontalStackPanel.Orientation = "Horizontal"
                     $horizontalStackPanel.Margin = "0,2,10,2"
-                    $horizontalStackPanel.MaxWidth = 220
-                    
+                    $horizontalStackPanel.MaxWidth = 312
+
+                    # The checkbox IS the card: its template draws the card chrome, so clicking
+                    # anywhere on it selects the app and nothing else has to handle the click
                     $checkBox = New-Object Windows.Controls.CheckBox
                     $checkBox.Name = $entryInfo.Name
+                    if ($appCardStyle) { $checkBox.Style = $appCardStyle }
+                    $checkBox.Width = 285
+
+                    $cardContent = New-Object Windows.Controls.StackPanel
+                    $cardContent.Orientation = "Horizontal"
+
+                    # Fixed-size icon slot: fallback letter underneath, brand icon painted over it
+                    $iconHost = New-Object Windows.Controls.Grid
+                    $iconHost.Width = 28
+                    $iconHost.Height = 28
+                    $iconHost.Margin = "0,0,10,0"
+                    $iconHost.VerticalAlignment = "Center"
+
+                    $iconFallback = New-Object Windows.Controls.TextBlock
+                    $iconFallback.Text = ("$($entryInfo.Content)".TrimStart(".") + "?").Substring(0, 1).ToUpper()
+                    $iconFallback.FontWeight = "Bold"
+                    $iconFallback.FontSize = 15
+                    $iconFallback.HorizontalAlignment = "Center"
+                    $iconFallback.VerticalAlignment = "Center"
+                    $iconFallback.Foreground = $window.FindResource("TextSecondary")
+                    $iconHost.Children.Add($iconFallback) | Out-Null
+
+                    $iconImage = New-Object Windows.Controls.Image
+                    $iconImage.Stretch = "Uniform"
+                    $iconImage.Visibility = "Collapsed"
+                    $iconHost.Children.Add($iconImage) | Out-Null
+
+                    $cardContent.Children.Add($iconHost) | Out-Null
+
                     # Use a TextBlock with wrapping for long names
                     $contentTextBlock = New-Object Windows.Controls.TextBlock
                     $contentTextBlock.Text = $entryInfo.Content
                     $contentTextBlock.TextWrapping = "Wrap"
-                    $contentTextBlock.MaxWidth = 180
-                    $checkBox.Content = $contentTextBlock
+                    $contentTextBlock.MaxWidth = 215
+                    $contentTextBlock.VerticalAlignment = "Center"
+                    $cardContent.Children.Add($contentTextBlock) | Out-Null
+
+                    $checkBox.Content = $cardContent
                     $checkBox.FontSize = $theme.FontSize
                     $checkBox.ToolTip = $entryInfo.Description
                     $checkBox.Margin = "0,0,3,0"
                     $checkBox.VerticalAlignment = "Top"
-                    $checkBox.VerticalContentAlignment = "Top"
                     if ($entryInfo.Checked -eq $true) {
                         $checkBox.IsChecked = $entryInfo.Checked
                     }
+
+                    Add-SrirachaToolIconRequest -Image $iconImage -Fallback $iconFallback -Link $entryInfo.Link
                     
                     # Set Tag on parent for Invoke-WPFSelectedAppsUpdate to identify the app
                     $horizontalStackPanel.Tag = $entryInfo.Name
@@ -5361,6 +5663,8 @@ function Invoke-WPFUIElements {
                 }
                 
                 $expander.Content = $wrapPanel
+                # Icons are only worth fetching once a category is actually opened
+                $expander.Add_Expanded({ Start-SrirachaToolIconFetch })
                 $categoryGrid.Children.Add($expander) | Out-Null
                 
                 # Register category expander to sync for search visibility
@@ -13265,8 +13569,10 @@ $inputXML = @'
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
         WindowStyle="None"
-        Width="1200"
-        Height="800"
+        Width="1500"
+        Height="950"
+        MinWidth="1100"
+        MinHeight="700"
         MaxWidth="1920"
         MaxHeight="1080"
         AllowsTransparency="True"
@@ -13620,6 +13926,39 @@ $inputXML = @'
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="checkBorder" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- App card: the whole card is the checkbox, so a click anywhere selects the app -->
+        <Style x:Key="AppCardStyle" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="FontFamily" Value="{StaticResource SatoshiFont}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="CardBorder"
+                                Background="{StaticResource GlassLight}"
+                                BorderBrush="{StaticResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="10,8"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CardBorder" Property="Background" Value="{StaticResource GlassHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CardBorder" Property="Background" Value="{StaticResource GlassActive}"/>
+                                <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource Accent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -15062,6 +15401,7 @@ $sync["Form"].title = $sync["Form"].title + " " + $sync.version
 if ($sync["VersionBadge"]) { $sync["VersionBadge"].Text = "v" + $sync.version }
 # Set the commands that will run when the form is closed
 $sync["Form"].Add_Closing({
+        Save-SrirachaToolWindowState
         $sync.runspace.Dispose()
         $sync.runspace.Close()
         [System.GC]::Collect()
@@ -15192,28 +15532,30 @@ $sync["Form"].Add_ContentRendered({
 
         # Load the Windows Forms assembly
         Add-Type -AssemblyName System.Windows.Forms
-        $primaryScreen = [System.Windows.Forms.Screen]::PrimaryScreen
-        # Check if the primary screen is found
-        if ($primaryScreen) {
-            # Extract screen width and height for the primary monitor
-            $screenWidth = $primaryScreen.Bounds.Width
-            $screenHeight = $primaryScreen.Bounds.Height
+        # Measure against the monitor this window is actually on, not the primary one,
+        # so a restored window on a larger second display is not snapped down
+        $screen = [System.Windows.Forms.Screen]::FromHandle($windowHandle)
+        if (-not $screen) { $screen = [System.Windows.Forms.Screen]::PrimaryScreen }
+        if ($screen) {
+            $screenArea = $screen.WorkingArea
+            $screenWidth = $screenArea.Width
+            $screenHeight = $screenArea.Height
 
             # Print the screen size
-            Write-Debug "Primary Monitor Width: $screenWidth pixels"
-            Write-Debug "Primary Monitor Height: $screenHeight pixels"
+            Write-Debug "Monitor Working Width: $screenWidth pixels"
+            Write-Debug "Monitor Working Height: $screenHeight pixels"
 
-            # Compare with the primary monitor size
+            # Only shrink when the window genuinely does not fit that monitor
             if ($width -gt $screenWidth -or $height -gt $screenHeight) {
-                Write-Debug "The specified width and/or height is greater than the primary monitor size."
-                [void][Window]::MoveWindow($windowHandle, 0, 0, $screenWidth, $screenHeight, $True)
+                Write-Debug "The specified width and/or height is greater than the monitor size."
+                [void][Window]::MoveWindow($windowHandle, $screenArea.X, $screenArea.Y, $screenWidth, $screenHeight, $True)
             }
             else {
-                Write-Debug "The specified width and height are within the primary monitor size limits."
+                Write-Debug "The specified width and height are within the monitor size limits."
             }
         }
         else {
-            Write-Debug "Unable to retrieve information about the primary monitor."
+            Write-Debug "Unable to retrieve information about the monitor."
         }
 
         Invoke-WPFTab "WPFTabDashboardBT"
@@ -15300,6 +15642,9 @@ $sync["Form"].Add_Loaded({
         param($e)
         $sync["Form"].MaxWidth = [Double]::PositiveInfinity
         $sync["Form"].MaxHeight = [Double]::PositiveInfinity
+        # Restore last session's geometry after the max size is lifted, or a saved
+        # size larger than the XAML MaxWidth would be silently clipped
+        Restore-SrirachaToolWindowState
     })
 
 # Initialize the hashtable
