@@ -2910,18 +2910,25 @@ function Set-SrirachaToolProgressBar {
         [int]$Percent,
         $Hide
     )
-    if ($hide) {
-        $sync.form.Dispatcher.Invoke([action] { $sync.ProgressBarLabel.Visibility = "Collapsed" })
-        $sync.form.Dispatcher.Invoke([action] { $sync.ProgressBar.Visibility = "Collapsed" })
-    }
-    else {
-        $sync.form.Dispatcher.Invoke([action] { $sync.ProgressBarLabel.Visibility = "Visible" })
-        $sync.form.Dispatcher.Invoke([action] { $sync.ProgressBar.Visibility = "Visible" })
-    }
-    $sync.form.Dispatcher.Invoke([action] { $sync.ProgressBarLabel.Content.Text = $label })
-    $sync.form.Dispatcher.Invoke([action] { $sync.ProgressBarLabel.Content.ToolTip = $label })
-    $sync.form.Dispatcher.Invoke([action] { $sync.ProgressBar.Value = $percent })
+    $visibility = if ($hide) { "Collapsed" } else { "Visible" }
 
+    # One marshal per update, not five. This runs once per app or tweak, so the old
+    # version cost five blocking cross-thread round-trips per item and made long runs
+    # feel choppy. Drives the bottom bar, which sits under the tabs and is therefore
+    # visible whichever tab you are on; the old per-tab bar only showed on Apps.
+    $sync.form.Dispatcher.Invoke([action] {
+            if ($sync.ProgressBarBottom) {
+                $sync.ProgressBarBottom.Visibility = $visibility
+                $sync.ProgressBarBottom.Value = $percent
+            }
+            if ($sync.ProgressBarLabelBottom) {
+                $sync.ProgressBarLabelBottom.Visibility = $visibility
+                if ($sync.ProgressBarLabelBottom.Content) {
+                    $sync.ProgressBarLabelBottom.Content.Text = $label
+                    $sync.ProgressBarLabelBottom.Content.ToolTip = $label
+                }
+            }
+        })
 }
 function Set-SrirachaToolRegistry {
     <#
@@ -14938,15 +14945,9 @@ $inputXML = @'
                                     <RowDefinition Height="*"/>
                                  </Grid.RowDefinitions>
                                  
-                                 <!-- Progress Bar at Top -->
-                                 <Grid Grid.Row="0" Margin="0,0,0,10">
-                                     <Label Name="ProgressBarLabel" HorizontalAlignment="Center" Visibility="Collapsed">
-                                         <Label.Content>
-                                             <TextBlock Text="Processing..." Foreground="{StaticResource TextPrimary}"/>
-                                         </Label.Content>
-                                     </Label>
-                                     <ProgressBar Name="ProgressBar" Height="4" Background="Transparent" Foreground="{StaticResource Accent}" BorderThickness="0" Visibility="Collapsed"/>
-                                 </Grid>
+                                 <!-- Progress now reports on the global bar under the tabs, so it stays
+                                      visible even if you switch tabs mid-run -->
+                                 <Grid Grid.Row="0"/>
                                  
                                  <!-- Toolbar -->
                                  <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,15">
