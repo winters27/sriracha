@@ -1642,23 +1642,28 @@ function Invoke-SrirachaToolScript {
     catch [System.Management.Automation.CommandNotFoundException] {
         Write-Warning "The specified command was not found."
         Write-Warning $PSItem.Exception.message
+        if ($sync.TweakErrors) { $null = $sync.TweakErrors.Add("$Name`: $($PSItem.Exception.Message)") }
     }
     catch [System.Management.Automation.RuntimeException] {
         Write-Warning "A runtime exception occurred."
         Write-Warning $PSItem.Exception.message
+        if ($sync.TweakErrors) { $null = $sync.TweakErrors.Add("$Name`: $($PSItem.Exception.Message)") }
     }
     catch [System.Security.SecurityException] {
         Write-Warning "A security exception occurred."
         Write-Warning $PSItem.Exception.message
+        if ($sync.TweakErrors) { $null = $sync.TweakErrors.Add("$Name`: $($PSItem.Exception.Message)") }
     }
     catch [System.UnauthorizedAccessException] {
         Write-Warning "Access denied. You do not have permission to perform this operation."
         Write-Warning $PSItem.Exception.message
+        if ($sync.TweakErrors) { $null = $sync.TweakErrors.Add("$Name`: $($PSItem.Exception.Message)") }
     }
     catch {
         # Generic catch block to handle any other type of exception
         Write-Warning "Unable to run script for $name due to unhandled exception"
-        Write-Warning $psitem.Exception.StackTrace
+        Write-Warning $psitem.Exception.Message
+        if ($sync.TweakErrors) { $null = $sync.TweakErrors.Add("$Name`: $($psitem.Exception.Message)") }
     }
 
 }
@@ -2305,12 +2310,12 @@ function Remove-SrirachaToolAPPX {
         }
         else {
             Write-Warning "Unable to uninstall $name due to unhandled exception"
-            Write-Warning $psitem.Exception.StackTrace
+            Write-Warning $psitem.Exception.Message
         }
     }
     catch {
         Write-Warning "Unable to uninstall $name due to unhandled exception"
-        Write-Warning $psitem.Exception.StackTrace
+        Write-Warning $psitem.Exception.Message
     }
 }
 function Set-PackageManagerPreference {
@@ -4324,29 +4329,21 @@ function Invoke-WPFRunspace {
     )
 
     # Create a PowerShell instance
-    $script:powershell = [powershell]::Create()
+    $powershell = [powershell]::Create()
 
     # Add Scriptblock and Arguments to runspace
-    $script:powershell.AddScript($ScriptBlock) | Out-Null
-    $script:powershell.AddArgument($ArgumentList) | Out-Null
+    $powershell.AddScript($ScriptBlock) | Out-Null
+    $powershell.AddArgument($ArgumentList) | Out-Null
 
     foreach ($parameter in $ParameterList) {
-        $script:powershell.AddParameter($parameter[0], $parameter[1]) | Out-Null
+        $powershell.AddParameter($parameter[0], $parameter[1]) | Out-Null
     }
-    $script:powershell.AddArgument($DebugPreference) | Out-Null  # Pass DebugPreference to the script block
-    $script:powershell.RunspacePool = $sync.runspace
+    $powershell.AddArgument($DebugPreference) | Out-Null  # Pass DebugPreference to the script block
+    $powershell.RunspacePool = $sync.runspace
 
-    # Execute the RunspacePool
-    $script:handle = $script:powershell.BeginInvoke()
-
-    # Clean up the RunspacePool threads when they are complete, and invoke the garbage collector to clean up the memory
-    if ($script:handle.IsCompleted) {
-        $script:powershell.EndInvoke($script:handle) | Out-Null
-        $script:powershell.Dispose()
-        $sync.runspace.Dispose()
-        $sync.runspace.Close()
-        [System.GC]::Collect()
-    }
+    # Fire-and-forget: error reporting happens inside the scriptblock, which is the
+    # only place a handler is guaranteed a runspace to run in.
+    $powershell.BeginInvoke() | Out-Null
 }
 function Invoke-WPFSelectedAppsUpdate {
     <#
@@ -4985,6 +4982,7 @@ function Invoke-WPFtweaksbutton {
         Write-Debug "Inside Number of tweaks to process: $($Tweaks.Count)"
 
         $sync.ProcessRunning = $true
+        $sync.TweakErrors = [System.Collections.ArrayList]::Synchronized([System.Collections.ArrayList]::new())
 
         if ($Tweaks.count -eq 1) {
             $sync.form.Dispatcher.Invoke([action] { Set-SrirachaToolTaskbaritem -state "Indeterminate" -value 0.01 -overlay "logo" })
@@ -4996,15 +4994,31 @@ function Invoke-WPFtweaksbutton {
 
         for ($i = 0; $i -lt $Tweaks.Count; $i++) {
             Set-SrirachaToolProgressBar -Label "Applying $($tweaks[$i])" -Percent ($i / $tweaks.Count * 100)
-            Invoke-SrirachaToolTweaks $tweaks[$i]
+            try {
+                Invoke-SrirachaToolTweaks $tweaks[$i]
+            }
+            catch {
+                Write-Warning "Tweak $($tweaks[$i]) failed: $($_.Exception.Message)"
+                $null = $sync.TweakErrors.Add("$($tweaks[$i]): $($_.Exception.Message)")
+            }
             $sync.form.Dispatcher.Invoke([action] { Set-SrirachaToolTaskbaritem -value ($i / $Tweaks.Count) })
         }
         Set-SrirachaToolProgressBar -Label "Tweaks finished" -Percent 100
         $sync.ProcessRunning = $false
         $sync.form.Dispatcher.Invoke([action] { Set-SrirachaToolTaskbaritem -state "None" -overlay "checkmark" })
-        Write-Host "================================="
-        Write-Host "--     Tweaks are Finished    ---"
-        Write-Host "================================="
+        if ($sync.TweakErrors.Count -eq 0) {
+            Write-Host "================================="
+            Write-Host "--     Tweaks are Finished    ---"
+            Write-Host "================================="
+        }
+        else {
+            Write-Host "=================================" -ForegroundColor Yellow
+            Write-Host "-- Tweaks finished with $($sync.TweakErrors.Count) error(s) --" -ForegroundColor Yellow
+            foreach ($tweakError in $sync.TweakErrors) {
+                Write-Host "   $tweakError" -ForegroundColor Red
+            }
+            Write-Host "=================================" -ForegroundColor Yellow
+        }
 
         # $ButtonType = [System.Windows.MessageBoxButton]::OK
         # $MessageboxTitle = "Tweaks are Finished "
@@ -5606,6 +5620,7 @@ function Invoke-WPFundoall {
         param($tweaks, $DebugPreference)
 
         $sync.ProcessRunning = $true
+        $sync.TweakErrors = [System.Collections.ArrayList]::Synchronized([System.Collections.ArrayList]::new())
         if ($tweaks.count -eq 1) {
             $sync.form.Dispatcher.Invoke([action] { Set-SrirachaToolTaskbaritem -state "Indeterminate" -value 0.01 -overlay "logo" })
         }
