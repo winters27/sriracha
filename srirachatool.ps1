@@ -281,6 +281,63 @@ Function Get-SrirachaToolCheckBoxes {
     }
     return  $Output
 }
+function Set-SrirachaToolScanState {
+    <#
+
+    .SYNOPSIS
+        Drives the Find Installed Apps button while a scan is running.
+
+    .DESCRIPTION
+        Spins the button's own icon and swaps its label, so the feedback sits exactly where
+        the click happened. Previously the only signal was the taskbar going indeterminate,
+        which sits behind the window, so a multi-second scan read as a freeze.
+        When the scan ends the label reports what was found, then settles back.
+
+    #>
+
+    param (
+        [bool]$Scanning,
+        [int]$Found = -1
+    )
+
+    $button = $sync.WPFGetInstalled
+    $label = $sync.WPFGetInstalledLabel
+    $icon = $sync.WPFGetInstalledIcon
+    if (-not $button -or -not $label -or -not $icon) { return }
+
+    if ($Scanning) {
+        $button.IsEnabled = $false
+        $label.Text = "Scanning..."
+
+        $spin = New-Object Windows.Media.Animation.DoubleAnimation
+        $spin.From = 0
+        $spin.To = 360
+        $spin.Duration = [Windows.Duration]::new([TimeSpan]::FromSeconds(1))
+        $spin.RepeatBehavior = [Windows.Media.Animation.RepeatBehavior]::Forever
+        $icon.RenderTransform.BeginAnimation([Windows.Media.RotateTransform]::AngleProperty, $spin)
+        return
+    }
+
+    # Passing $null clears the animation and releases the property back to its local value
+    $icon.RenderTransform.BeginAnimation([Windows.Media.RotateTransform]::AngleProperty, $null)
+    $icon.RenderTransform.Angle = 0
+    $button.IsEnabled = $true
+
+    if ($Found -ge 0) {
+        $label.Text = "Found $Found installed"
+        # Settle back to the resting label so the button does not read as a status field
+        $revert = New-Object Windows.Threading.DispatcherTimer
+        $revert.Interval = [TimeSpan]::FromSeconds(4)
+        $revert.Add_Tick({
+                $this.Stop()
+                if ($sync.WPFGetInstalledLabel) { $sync.WPFGetInstalledLabel.Text = "Find Installed Apps" }
+            })
+        $revert.Start()
+    }
+    else {
+        $label.Text = "Find Installed Apps"
+    }
+}
 function Set-SrirachaToolAppsColumns {
     <#
 
@@ -1588,11 +1645,17 @@ Function Invoke-SrirachaToolCurrentSystem {
         $CheckBox
     )
     if ($CheckBox -eq "choco") {
+        if (-not (Get-Command choco -ErrorAction SilentlyContinue)) { return }
         $apps = (choco list | Select-String -Pattern "^\S+").Matches.Value
         $filter = Get-SrirachaToolVariables -Type Checkbox | Where-Object { $psitem -like "WPFInstall*" }
         $sync.GetEnumerator() | Where-Object { $psitem.Key -in $filter } | ForEach-Object {
-            $dependencies = @($sync.configs.applications.$($psitem.Key).choco -split ";")
-            if ($dependencies -in $apps) {
+            $chocoId = $sync.configs.applications.$($psitem.Key).choco
+            if (-not $chocoId -or $chocoId -eq "na") { return }
+            $dependencies = @($chocoId -split ";")
+            # Compare each package individually. Testing the whole array with -in only
+            # worked by accident for single-package entries and never matched anything
+            # with a ';' in it, so multi-package apps were undetectable.
+            if ($dependencies | Where-Object { $_ -in $apps }) {
                 Write-Output $psitem.name
             }
         }
@@ -4297,28 +4360,31 @@ function Invoke-WPFGetInstalled {
     if (($sync["ManagerPreference"] -ne [PackageManagers]::Choco) -and ((Test-SrirachaToolPackageManager -winget) -eq "not-installed") -and $checkbox -eq "winget") {
         return
     }
-    $managerPreference = $sync["ManagerPreference"]
 
-    Invoke-WPFRunspace -ParameterList @(("managerPreference", $managerPreference), ("checkbox", $checkbox)) -DebugPreference $DebugPreference -ScriptBlock {
+    if ($checkbox -eq "winget") { Set-SrirachaToolScanState -Scanning $true }
+
+    Invoke-WPFRunspace -ParameterList @(, ("checkbox", $checkbox)) -DebugPreference $DebugPreference -ScriptBlock {
         param (
-            [string]$checkbox,
-            [PackageManagers]$managerPreference
+            [string]$checkbox
         )
         $sync.ProcessRunning = $true
         $sync.form.Dispatcher.Invoke([action] { Set-SrirachaToolTaskbaritem -state "Indeterminate" })
 
         if ($checkbox -eq "winget") {
+            # Walk both managers and merge. Preferring one used to hide everything installed
+            # by the other, and 4 apps in the catalog have no winget id at all.
             Write-Host "Getting Installed Programs..."
-            switch ($managerPreference) {
-                "Choco" { $Checkboxes = Invoke-SrirachaToolCurrentSystem -CheckBox "choco"; break }
-                "Winget" { $Checkboxes = Invoke-SrirachaToolCurrentSystem -CheckBox $checkbox; break }
-            }
+            $Checkboxes = @()
+            $Checkboxes += Invoke-SrirachaToolCurrentSystem -CheckBox "winget"
+            $Checkboxes += Invoke-SrirachaToolCurrentSystem -CheckBox "choco"
+            $Checkboxes = $Checkboxes | Sort-Object -Unique
         }
         elseif ($checkbox -eq "tweaks") {
             Write-Host "Getting Installed Tweaks..."
             $Checkboxes = Invoke-SrirachaToolCurrentSystem -CheckBox $checkbox
         }
 
+        $found = @($Checkboxes).Count
         $sync.form.Dispatcher.invoke({
                 foreach ($checkbox in $Checkboxes) {
                     $sync.$checkbox.ischecked = $True
@@ -4327,7 +4393,10 @@ function Invoke-WPFGetInstalled {
 
         Write-Host "Done..."
         $sync.ProcessRunning = $false
-        $sync.form.Dispatcher.Invoke([action] { Set-SrirachaToolTaskbaritem -state "None" })
+        $sync.form.Dispatcher.Invoke([action] {
+                Set-SrirachaToolTaskbaritem -state "None"
+                Set-SrirachaToolScanState -Scanning $false -Found $found
+            })
     }
 }
 function Invoke-WPFImpex {
@@ -14802,10 +14871,14 @@ $inputXML = @'
                                       </Button>
                                       
                                       <!-- Utility: Sync Installed -->
-                                      <Button Name="WPFGetInstalled" Style="{StaticResource ActionButtonPreset}" Margin="0,0,12,0">
+                                      <Button Name="WPFGetInstalled" Style="{StaticResource ActionButtonPreset}" Margin="0,0,12,0" ToolTip="Scans this PC with winget and Chocolatey, then ticks the apps you already have so you can update or remove them">
                                           <StackPanel Orientation="Horizontal">
-                                              <Path Data="{StaticResource IconSync}" Stroke="{StaticResource TextSecondary}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="Uniform" Width="13" Height="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                              <TextBlock Text="Sync Installed" VerticalAlignment="Center"/>
+                                              <Path Name="WPFGetInstalledIcon" Data="{StaticResource IconSync}" Stroke="{StaticResource TextSecondary}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="Uniform" Width="13" Height="13" Margin="0,0,6,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                                  <Path.RenderTransform>
+                                                      <RotateTransform Angle="0"/>
+                                                  </Path.RenderTransform>
+                                              </Path>
+                                              <TextBlock Name="WPFGetInstalledLabel" Text="Find Installed Apps" VerticalAlignment="Center"/>
                                           </StackPanel>
                                       </Button>
                                       
