@@ -3123,16 +3123,12 @@ function Set-SrirachaToolProgressBar {
     # feel choppy. Drives the bottom bar, which sits under the tabs and is therefore
     # visible whichever tab you are on; the old per-tab bar only showed on Apps.
     $sync.form.Dispatcher.Invoke([action] {
-            if ($sync.ProgressBarBottom) {
-                $sync.ProgressBarBottom.Visibility = $visibility
-                $sync.ProgressBarBottom.Value = $percent
-            }
+            # One host controls visibility, so the label and bar can never disagree
+            if ($sync.ProgressBarHost) { $sync.ProgressBarHost.Visibility = $visibility }
+            if ($sync.ProgressBarBottom) { $sync.ProgressBarBottom.Value = $percent }
             if ($sync.ProgressBarLabelBottom) {
-                $sync.ProgressBarLabelBottom.Visibility = $visibility
-                if ($sync.ProgressBarLabelBottom.Content) {
-                    $sync.ProgressBarLabelBottom.Content.Text = $label
-                    $sync.ProgressBarLabelBottom.Content.ToolTip = $label
-                }
+                $sync.ProgressBarLabelBottom.Text = $label
+                $sync.ProgressBarLabelBottom.ToolTip = $label
             }
         })
 }
@@ -5733,7 +5729,10 @@ function Invoke-WPFtweaksbutton {
         # Execute other selected tweaks
 
         for ($i = 0; $i -lt $Tweaks.Count; $i++) {
-            Set-SrirachaToolProgressBar -Label "Applying $($tweaks[$i])" -Percent ($i / $tweaks.Count * 100)
+            # Show the tweak's display name, not its internal WPFTweaks* key
+            $tweakLabel = $sync.configs.tweaks.$($tweaks[$i]).Content
+            if (-not $tweakLabel) { $tweakLabel = $tweaks[$i] }
+            Set-SrirachaToolProgressBar -Label "Applying $tweakLabel" -Percent ($i / $tweaks.Count * 100)
             try {
                 Invoke-SrirachaToolTweaks $tweaks[$i]
             }
@@ -6470,7 +6469,10 @@ function Invoke-WPFundoall {
 
 
         for ($i = 0; $i -lt $tweaks.Count; $i++) {
-            Set-SrirachaToolProgressBar -Label "Undoing $($tweaks[$i])" -Percent ($i / $tweaks.Count * 100)
+            # Show the tweak's display name, not its internal WPFTweaks* key
+            $tweakLabel = $sync.configs.tweaks.$($tweaks[$i]).Content
+            if (-not $tweakLabel) { $tweakLabel = $tweaks[$i] }
+            Set-SrirachaToolProgressBar -Label "Undoing $tweakLabel" -Percent ($i / $tweaks.Count * 100)
             Invoke-SrirachaToolTweaks $tweaks[$i] -undo $true
             $sync.form.Dispatcher.Invoke([action] { Set-SrirachaToolTaskbaritem -value ($i / $tweaks.Count) })
         }
@@ -15008,6 +15010,7 @@ $inputXML = @'
                     <Grid.RowDefinitions>
                         <RowDefinition Height="60"/> <!-- Top Bar -->
                         <RowDefinition Height="*"/>  <!-- Main View -->
+                        <RowDefinition Height="Auto"/> <!-- Progress -->
                     </Grid.RowDefinitions>
 
                     <!-- Top Bar -->
@@ -15537,14 +15540,28 @@ For more information, visit the official MAS documentation.</TextBlock>
 
                      </TabControl>
                      
-                     <!-- Progress Bar at Bottom -->
-                     <Grid Grid.Row="1" VerticalAlignment="Bottom">
-                         <Label Name="ProgressBarLabelBottom" HorizontalAlignment="Center" Margin="20,0,20,10" Visibility="Collapsed">
-                             <Label.Content>
-                                 <TextBlock Text="Processing..." Foreground="{StaticResource TextPrimary}"/>
-                             </Label.Content>
-                         </Label>
-                         <ProgressBar Name="ProgressBarBottom" Height="4" Margin="20,0,20,0" Background="Transparent" Foreground="{StaticResource Accent}" BorderThickness="0" Visibility="Collapsed"/>
+                     <!-- Progress, in its own row. It used to share Grid.Row 1 with the TabControl, so it
+                          floated over the tab content and clipped against the toolbar; the label and bar
+                          also shared a single cell and overlapped each other. -->
+                     <Grid Name="ProgressBarHost" Grid.Row="2" Margin="20,0,20,16" Visibility="Collapsed">
+                         <Grid.RowDefinitions>
+                             <RowDefinition Height="Auto"/>
+                             <RowDefinition Height="Auto"/>
+                         </Grid.RowDefinitions>
+                         <TextBlock Name="ProgressBarLabelBottom" Grid.Row="0" Text="Processing..." FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,6" TextTrimming="CharacterEllipsis"/>
+                         <ProgressBar Name="ProgressBarBottom" Grid.Row="1" Height="6" Minimum="0" Maximum="100" BorderThickness="0">
+                             <ProgressBar.Template>
+                                 <!-- Minimal template purely to get a visible, rounded track. The old bar had
+                                      a Transparent background, so only the filled sliver was visible. -->
+                                 <ControlTemplate TargetType="ProgressBar">
+                                     <Border CornerRadius="3" Background="{StaticResource GlassMedium}">
+                                         <Grid x:Name="PART_Track">
+                                             <Border x:Name="PART_Indicator" CornerRadius="3" Background="{StaticResource Accent}" HorizontalAlignment="Left"/>
+                                         </Grid>
+                                     </Border>
+                                 </ControlTemplate>
+                             </ProgressBar.Template>
+                         </ProgressBar>
                      </Grid>
                 </Grid>
              </Grid>
