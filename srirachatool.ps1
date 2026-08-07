@@ -252,6 +252,56 @@ Function Get-SrirachaToolCheckBoxes {
     }
     return  $Output
 }
+function Set-SrirachaToolAppsColumns {
+    <#
+
+    .SYNOPSIS
+        Lays the app categories out into independent vertical columns.
+
+    .DESCRIPTION
+        Each column flows on its own, so expanding a category only moves the categories
+        beneath it instead of inflating an entire row and leaving dead space next to the
+        collapsed ones. Categories are dealt across the columns in order, which keeps the
+        collapsed view even and preserves the familiar left-to-right reading order.
+        Does nothing unless the column count actually changed, so resizing stays cheap.
+
+    #>
+
+    param (
+        [double]$AvailableWidth
+    )
+
+    $columnHost = $sync.AppsCategoryWrapPanel
+    $expanders = $sync.AppsCategoryExpanders
+    if (-not $columnHost -or -not $expanders) { return }
+
+    $minColumnWidth = 360
+    $columnCount = [Math]::Floor($AvailableWidth / $minColumnWidth)
+    if ($columnCount -lt 1) { $columnCount = 1 }
+    if ($columnCount -gt $expanders.Count) { $columnCount = [Math]::Max(1, $expanders.Count) }
+
+    if ($sync.AppsColumnCount -eq $columnCount) { return }
+    $sync.AppsColumnCount = $columnCount
+
+    # Detach the categories before dropping the old columns; a WPF element may only have one parent
+    foreach ($column in $columnHost.Children) { $column.Children.Clear() }
+    $columnHost.Children.Clear()
+    $columnHost.Columns = $columnCount
+
+    $columns = @()
+    for ($i = 0; $i -lt $columnCount; $i++) {
+        $column = New-Object Windows.Controls.StackPanel
+        $column.Orientation = "Vertical"
+        $column.VerticalAlignment = "Top"
+        $column.Margin = "0,0,10,0"
+        $columnHost.Children.Add($column) | Out-Null
+        $columns += $column
+    }
+
+    for ($i = 0; $i -lt $expanders.Count; $i++) {
+        $columns[$i % $columnCount].Children.Add($expanders[$i]) | Out-Null
+    }
+}
 function Get-SrirachaToolIconSource {
     <#
 
@@ -5461,11 +5511,13 @@ function Invoke-WPFUIElements {
         $categoryExpanderStyle = $window.FindResource("CategoryExpanderStyle")
         $appCardStyle = $window.FindResource("AppCardStyle")
         
-        # Create a WrapPanel that stretches to fill parent width
-        $categoryGrid = New-Object Windows.Controls.WrapPanel
+        # Independent columns rather than a WrapPanel: a WrapPanel lays out in rows and makes
+        # every row as tall as its tallest item, so expanding one category left a band of dead
+        # space beside the collapsed ones. Columns flow separately, so expanding a category
+        # only pushes down the categories under it.
+        $categoryGrid = New-Object Windows.Controls.Primitives.UniformGrid
         $categoryGrid.Name = "AppsCategoryWrapPanel"
-        $categoryGrid.Orientation = "Horizontal"
-        $categoryGrid.HorizontalAlignment = "Left"
+        $categoryGrid.HorizontalAlignment = "Stretch"
         $categoryGrid.VerticalAlignment = "Top"
         
         # Store reference in sync
@@ -5474,19 +5526,18 @@ function Invoke-WPFUIElements {
         # Get the ScrollViewer and set our WrapPanel as its direct content
         $appsScrollViewer = $window.FindName("AppsScrollViewer")
         if ($appsScrollViewer) {
-            # Replace the Grid with our WrapPanel directly
+            # Replace the Grid with our column host directly. No width binding here: the old one
+            # bound to ActualWidth, which includes the vertical scrollbar, so content was clipped.
+            # Letting it stretch inside the viewport avoids that.
             $appsScrollViewer.Content = $categoryGrid
-            
-            # Bind WrapPanel width to ScrollViewer's ActualWidth
-            $widthBinding = New-Object Windows.Data.Binding("ActualWidth")
-            $widthBinding.Source = $appsScrollViewer
-            $categoryGrid.SetBinding([Windows.FrameworkElement]::WidthProperty, $widthBinding) | Out-Null
         }
         else {
             # Fallback: add to targetGrid if ScrollViewer not found
             $targetGrid.Children.Add($categoryGrid) | Out-Null
         }
         
+        $builtCategories = @()
+
         # Collect all categories across all panels
         $allCategories = @()
         foreach ($panelKey in ($organizedData.Keys | Sort-Object)) {
@@ -5499,9 +5550,8 @@ function Invoke-WPFUIElements {
                 # Create Expander for category - sized for 4-column layout
                 $expander = New-Object Windows.Controls.Expander
                 $expander.IsExpanded = $false
-                # Width of 240px to better fill the container
-                $expander.Width = 340
-                $expander.HorizontalAlignment = "Left"
+                # No fixed width: each category fills whatever column it lands in
+                $expander.HorizontalAlignment = "Stretch"
                 $expander.VerticalAlignment = "Top"
                 $expander.HorizontalContentAlignment = "Stretch"
                 $expander.Margin = "0,0,10,10"
@@ -5630,12 +5680,21 @@ function Invoke-WPFUIElements {
                 }
                 
                 $expander.Content = $wrapPanel
-                $categoryGrid.Children.Add($expander) | Out-Null
-                
+                # Held aside rather than added directly; the column layout places them below
+                $builtCategories += $expander
+
                 # Register category expander to sync for search visibility
                 $sync[$category] = $expander
             }
         }
+
+        $sync.AppsCategoryExpanders = $builtCategories
+        Set-SrirachaToolAppsColumns -AvailableWidth $appsScrollViewer.ActualWidth
+
+        # Recompute only when the column count actually changes, so resizing stays cheap
+        $appsScrollViewer.Add_SizeChanged({
+                Set-SrirachaToolAppsColumns -AvailableWidth $this.ActualWidth
+            })
     }
     else {
         # Original logic for other panels (tweakspanel, featurespanel, etc.)
