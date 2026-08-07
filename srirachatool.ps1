@@ -169,6 +169,89 @@ function Add-SelectedAppsMenuItem {
     # Add new Element to Popup
     $sync.selectedAppsstackPanel.Children.Add($selectedAppGrid)
 }
+Function Get-SrirachaToolCheckBoxes {
+
+    <#
+
+    .SYNOPSIS
+        Finds all checkboxes that are checked on the specific tab and inputs them into a script.
+
+    .PARAMETER unCheck
+        Whether to uncheck the checkboxes that are checked. Defaults to true
+
+    .OUTPUTS
+        A List containing the name of each checked checkbox
+
+    .EXAMPLE
+        Get-SrirachaToolCheckBoxes "WPFInstall"
+
+    #>
+
+    Param(
+        [boolean]$unCheck = $false
+    )
+
+    $Output = @{
+        Install    = @()
+        WPFTweaks  = @()
+        WPFFeature = @()
+        WPFInstall = @()
+    }
+
+    $CheckBoxes = $sync.GetEnumerator() | Where-Object { $_.Value -is [System.Windows.Controls.CheckBox] }
+
+    # First check and add WPFTweaksRestorePoint if checked
+    $RestorePoint = $CheckBoxes | Where-Object { $_.Key -eq 'WPFTweaksRestorePoint' -and $_.Value.IsChecked -eq $true }
+    if ($RestorePoint) {
+        $Output["WPFTweaks"] = @('WPFTweaksRestorePoint')
+        Write-Debug "Adding WPFTweaksRestorePoint as first in WPFTweaks"
+
+        if ($unCheck) {
+            $RestorePoint.Value.IsChecked = $false
+        }
+    }
+
+    foreach ($CheckBox in $CheckBoxes) {
+        if ($CheckBox.Key -eq 'WPFTweaksRestorePoint') { continue }  # Skip since it's already handled
+
+        $group = if ($CheckBox.Key.StartsWith("WPFInstall")) { "Install" }
+        elseif ($CheckBox.Key.StartsWith("WPFTweaks")) { "WPFTweaks" }
+        elseif ($CheckBox.Key.StartsWith("WPFFeature")) { "WPFFeature" }
+        if ($group) {
+            if ($CheckBox.Value.IsChecked -eq $true) {
+                $feature = switch ($group) {
+                    "Install" {
+                        # Get the winget value
+                        [PsCustomObject]@{
+                            winget = "$($sync.configs.applications.$($CheckBox.Key).winget)";
+                            choco  = "$($sync.configs.applications.$($CheckBox.Key).choco)";
+                        }
+
+                    }
+                    default {
+                        $CheckBox.Name
+                    }
+                }
+
+                if (-not $Output.ContainsKey($group)) {
+                    $Output[$group] = @()
+                }
+                if ($group -eq "Install") {
+                    $Output["WPFInstall"] += $CheckBox.Key
+                    Write-Debug "Adding: $($CheckBox.Key) under: WPFInstall"
+                }
+
+                Write-Debug "Adding: $($feature) under: $($group)"
+                $Output[$group] += $feature
+
+                if ($unCheck) {
+                    $CheckBox.Value.IsChecked = $false
+                }
+            }
+        }
+    }
+    return  $Output
+}
 function Get-SrirachaToolInstallerProcess {
     <#
 
